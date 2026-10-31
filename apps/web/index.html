@@ -23,51 +23,71 @@
       </header>
 
       <!-- Auth Section (Visible when not logged in) -->
-      <section id="auth-section" class="grid-2">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>Sign in</h2>
-              <p>Sign in to your Brightloop operational workspace.</p>
-            </div>
-          </div>
-          <form id="login-form">
-            <label>
-              Email
-              <input name="email" type="email" value="admin@brightloop.example" required />
-            </label>
-            <label>
-              Password
-              <input name="password" type="password" value="Admin@12345" required />
-            </label>
-            <button class="button primary" type="submit">Sign in</button>
-            <p id="login-message" class="form-message" role="status"></p>
-          </form>
+      <section id="auth-section" class="auth-layout">
+        <div class="auth-intro">
+          <span class="eyebrow">Subscription operations, simplified</span>
+          <h1>Run every subscription from one clear workspace.</h1>
+          <p>Manage plans, recurring billing, invoices, payments, and financial insight without switching between spreadsheets and disconnected tools.</p>
+          <ul class="auth-benefits">
+            <li>Automated recurring billing</li>
+            <li>Customer self-service access</li>
+            <li>Real-time finance visibility</li>
+          </ul>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>Create Account</h2>
-              <p>Create a self-service customer profile.</p>
-            </div>
+        <div class="panel auth-card">
+          <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button id="login-tab" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="login-view">Sign in</button>
+            <button id="signup-tab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="signup-view">Create account</button>
           </div>
-          <form id="register-form">
-            <label>
-              Full Name
-              <input name="displayName" placeholder="Jane Doe" required />
-            </label>
-            <label>
-              Email
-              <input name="email" type="email" placeholder="jane@example.com" required />
-            </label>
-            <label>
-              Password
-              <input name="password" type="password" placeholder="Min 9 chars, upper, lower, symbol" required />
-            </label>
-            <button class="button secondary" type="submit">Register</button>
-            <p id="register-message" class="form-message" role="status"></p>
-          </form>
+
+          <div id="login-view" class="auth-view" role="tabpanel" aria-labelledby="login-tab">
+            <div class="panel-header">
+              <div>
+                <h2>Welcome back</h2>
+                <p>Sign in to your Brightloop workspace.</p>
+              </div>
+            </div>
+            <form id="login-form">
+              <label>
+                Email
+                <input name="email" type="email" autocomplete="email" required />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required />
+              </label>
+              <button class="button primary" type="submit">Sign in</button>
+              <p id="login-message" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+            <p class="auth-switch">New to Brightloop? <button id="show-signup" class="text-button" type="button">Create an account</button></p>
+          </div>
+
+          <div id="signup-view" class="auth-view" role="tabpanel" aria-labelledby="signup-tab" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>Create your account</h2>
+                <p>Start managing your subscriptions in minutes.</p>
+              </div>
+            </div>
+            <form id="register-form">
+              <label>
+                Full Name
+                <input name="displayName" autocomplete="name" placeholder="Jane Doe" required />
+              </label>
+              <label>
+                Email
+                <input name="email" type="email" autocomplete="email" placeholder="jane@example.com" required />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="new-password" placeholder="At least 9 characters with upper, lower, and symbol" required />
+              </label>
+              <button class="button primary" type="submit">Create account</button>
+              <p id="register-message" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+            <p class="auth-switch">Already have an account? <button id="show-login" class="text-button" type="button">Sign in</button></p>
+          </div>
         </div>
       </section>
 
