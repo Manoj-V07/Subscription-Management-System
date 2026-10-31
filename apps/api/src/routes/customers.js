@@ -27,7 +27,23 @@ function createCustomersRouter({ pool, audit, sendError, authenticate, requirePe
     try {
       if (!isStaffOrAdmin) {
         // Customer portal scoping: customer can only view their own profile
-        const result = await pool.query('SELECT * FROM customers WHERE user_id = $1', [req.user.id]);
+        let result = await pool.query('SELECT * FROM customers WHERE user_id = $1', [req.user.id]);
+        if (result.rows.length === 0) {
+          // Check if there is an existing customer profile matching user email
+          const byEmail = await pool.query('SELECT * FROM customers WHERE email = $1', [req.user.email]);
+          if (byEmail.rows.length > 0) {
+            await pool.query('UPDATE customers SET user_id = $1 WHERE id = $2', [req.user.id, byEmail.rows[0].id]);
+            result = await pool.query('SELECT * FROM customers WHERE user_id = $1', [req.user.id]);
+          } else {
+            // Auto-provision a customer record for this registered customer user
+            const created = await pool.query(
+              `INSERT INTO customers (name, email, billing_address, user_id, status)
+               VALUES ($1, $2, $3::jsonb, $4, 'active') RETURNING *`,
+              [req.user.displayName || req.user.display_name || req.user.email, req.user.email, JSON.stringify({}), req.user.id],
+            );
+            result = created;
+          }
+        }
         return res.json({ data: result.rows.map(mapCustomerRow) });
       }
 
@@ -141,10 +157,10 @@ function createCustomersRouter({ pool, audit, sendError, authenticate, requirePe
 
       const { name, phone, billingAddress, taxIdentifier, status } = req.body || {};
 
-      const updatedName = isStaffOrAdmin && typeof name === 'string' && name.trim() ? name.trim() : current.name;
+      const updatedName = (isStaffOrAdmin || current.user_id === req.user.id) && typeof name === 'string' && name.trim() ? name.trim() : current.name;
       const updatedPhone = phone !== undefined ? (phone ? phone.trim() : null) : current.phone;
       const updatedAddress = typeof billingAddress === 'object' && billingAddress !== null ? JSON.stringify(billingAddress) : JSON.stringify(current.billing_address);
-      const updatedTax = isStaffOrAdmin && taxIdentifier !== undefined ? (taxIdentifier ? taxIdentifier.trim() : null) : current.tax_identifier;
+      const updatedTax = (isStaffOrAdmin || current.user_id === req.user.id) && taxIdentifier !== undefined ? (taxIdentifier ? taxIdentifier.trim() : null) : current.tax_identifier;
       const updatedStatus = isStaffOrAdmin && ['active', 'archived'].includes(status) ? status : current.status;
 
       const result = await pool.query(
@@ -167,6 +183,7 @@ function createCustomersRouter({ pool, audit, sendError, authenticate, requirePe
 
       res.json({ data: customer });
     } catch (error) {
+      console.error('Error updating customer:', error);
       sendError(res, 500, 'INTERNAL_ERROR', 'Unable to update customer.');
     }
   });

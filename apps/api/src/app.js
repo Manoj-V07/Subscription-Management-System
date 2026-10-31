@@ -278,6 +278,22 @@ function createApp({
          VALUES ($1, $2, $3, $4) RETURNING id, email, display_name, status`,
         [normalizedEmail, passwordHash, displayName.trim(), role.rows[0].id],
       );
+      const newUser = result.rows[0];
+
+      // Auto-link or auto-provision customer record for customer portal self-service
+      try {
+        const existingCust = await pool.query('SELECT id FROM customers WHERE email = $1', [normalizedEmail]);
+        if (existingCust.rowCount) {
+          await pool.query('UPDATE customers SET user_id = $1 WHERE id = $2', [newUser.id, existingCust.rows[0].id]);
+        } else {
+          await pool.query(
+            `INSERT INTO customers (name, email, billing_address, user_id, status)
+             VALUES ($1, $2, $3::jsonb, $4, 'active')`,
+            [displayName.trim(), normalizedEmail, JSON.stringify({}), newUser.id],
+          );
+        }
+      } catch (_) {}
+
       await audit({ actorUserId: result.rows[0].id, action: 'account.registered', entityType: 'user', entityId: result.rows[0].id, requestId: req.requestId });
       res.status(201).json({ data: { user: result.rows[0], message: 'Account created. Email verification will be added in the next identity slice.' } });
     } catch (error) {
