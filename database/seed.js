@@ -6,16 +6,18 @@ const permissions = [
   ['dashboard.read', 'View dashboards'],
   ['customers.read', 'View customers'],
   ['customers.manage', 'Manage customers'],
+  ['catalog.manage', 'Manage catalogue configuration'],
+  ['quotes.manage', 'Manage quotations and sales templates'],
+  ['subscriptions.manage', 'Manage subscriptions and lifecycle'],
   ['billing.read', 'View billing records'],
   ['billing.manage', 'Manage billing records'],
-  ['catalog.manage', 'Manage catalogue configuration'],
   ['staff.manage', 'Manage internal staff'],
   ['reports.read', 'View reports'],
   ['portal.read', 'View customer portal'],
 ];
 
 async function main() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://brightloop:brightloop@localhost:5432/brightloop' });
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -28,9 +30,21 @@ async function main() {
 
     const rolePermissions = {
       admin: permissions.map(([key]) => key),
-      staff: ['dashboard.read', 'customers.read', 'customers.manage', 'billing.read', 'billing.manage', 'reports.read', 'portal.read'],
+      staff: [
+        'dashboard.read',
+        'customers.read',
+        'customers.manage',
+        'catalog.manage',
+        'quotes.manage',
+        'subscriptions.manage',
+        'billing.read',
+        'billing.manage',
+        'reports.read',
+        'portal.read',
+      ],
       customer: ['portal.read'],
     };
+
     for (const roleName of Object.keys(rolePermissions)) {
       await client.query('INSERT INTO roles (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', [roleName]);
       for (const permission of rolePermissions[roleName]) {
@@ -43,6 +57,7 @@ async function main() {
       }
     }
 
+    // Seed default admin
     const passwordHash = await bcrypt.hash('Admin@12345', 12);
     await client.query(
       `INSERT INTO users (email, password_hash, display_name, role_id, email_verified_at)
@@ -51,8 +66,58 @@ async function main() {
        ON CONFLICT (email) DO NOTHING`,
       [passwordHash],
     );
+
+    // Seed Phase 2 default Tax Rule: GST 18%
+    const taxRes = await client.query(
+      `INSERT INTO tax_rules (name, rate_percentage, jurisdiction)
+       VALUES ('GST 18%', 18.00, 'IN')
+       RETURNING id`,
+    );
+    const taxRuleId = taxRes.rows[0]?.id;
+
+    // Seed Phase 2 default Discount Rule: Launch 10%
+    await client.query(
+      `INSERT INTO discount_rules (name, code, type, value, min_threshold_cents, scope)
+       VALUES ('Launch Offer 10%', 'LAUNCH10', 'percentage', 10.00, 100000, 'entire_order')
+       ON CONFLICT (code) DO NOTHING`,
+    );
+
+    // Seed Phase 2 default Product & Variants
+    const prodRes = await client.query(
+      `INSERT INTO products (name, product_type, sales_price_cents, cost_price_cents, currency, notes)
+       VALUES ('Brightloop Platform Core', 'service', 250000, 50000, 'INR', 'Core SaaS platform subscription tier')
+       RETURNING id`,
+    );
+    const productId = prodRes.rows[0]?.id;
+
+    if (productId) {
+      await client.query(
+        `INSERT INTO product_variants (product_id, label, adjustment_type, adjustment_value)
+         VALUES
+           ($1, 'Enterprise Odoo SLA', 'fixed', 56000),
+           ($1, 'Priority 24/7 Support', 'percentage', 15.00)
+         ON CONFLICT (product_id, label) DO NOTHING`,
+        [productId],
+      );
+    }
+
+    // Seed Phase 2 Plans
+    await client.query(
+      `INSERT INTO plans (name, code, interval, interval_count, min_quantity, auto_renew)
+       VALUES
+         ('Monthly Professional', 'PLAN-M-PRO', 'monthly', 1, 1, true),
+         ('Yearly Enterprise', 'PLAN-Y-ENT', 'yearly', 1, 5, true)
+       ON CONFLICT (code) DO NOTHING`,
+    );
+
+    // Seed Phase 2 Sample Customer
+    await client.query(
+      `INSERT INTO customers (name, email, phone, billing_address, tax_identifier)
+       VALUES ('Acme Software Ltd', 'billing@acme.example', '+91 98765 43210', '{"street": "100 Tech Park", "city": "Bengaluru", "state": "Karnataka", "country": "IN", "postal_code": "560001"}', 'GSTIN29AABCU9603R1ZM')`,
+    );
+
     await client.query('COMMIT');
-    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345');
+    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345 with Phase 2 initial catalogue.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
