@@ -70,6 +70,22 @@ document.querySelectorAll('.tab-button').forEach((btn) => {
   });
 });
 
+function switchAuthView(view) {
+  const isLogin = view === 'login';
+  document.getElementById('login-view').hidden = !isLogin;
+  document.getElementById('signup-view').hidden = isLogin;
+  document.getElementById('login-tab').classList.toggle('active', isLogin);
+  document.getElementById('signup-tab').classList.toggle('active', !isLogin);
+  document.getElementById('login-tab').setAttribute('aria-selected', String(isLogin));
+  document.getElementById('signup-tab').setAttribute('aria-selected', String(!isLogin));
+  document.getElementById(isLogin ? 'login-tab' : 'signup-tab').focus();
+}
+
+document.getElementById('login-tab')?.addEventListener('click', () => switchAuthView('login'));
+document.getElementById('signup-tab')?.addEventListener('click', () => switchAuthView('signup'));
+document.getElementById('show-login')?.addEventListener('click', () => switchAuthView('login'));
+document.getElementById('show-signup')?.addEventListener('click', () => switchAuthView('signup'));
+
 // Auth Handlers
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
