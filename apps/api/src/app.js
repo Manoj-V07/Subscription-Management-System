@@ -3,6 +3,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createCatalogRouter } = require('./routes/catalog');
+const { createStaffRouter } = require('./routes/staff');
+const { createCustomersRouter } = require('./routes/customers');
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}$/;
 
@@ -182,7 +184,12 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
   });
 
   const catalogRouter = createCatalogRouter({ pool, audit, sendError, authenticate, requirePermission });
+  const staffRouter = createStaffRouter({ pool, audit, sendError, authenticate, requirePermission, PASSWORD_PATTERN });
+  const customersRouter = createCustomersRouter({ pool, audit, sendError, authenticate, requirePermission });
+
   app.use('/api/v1', catalogRouter);
+  app.use('/api/v1', staffRouter);
+  app.use('/api/v1', customersRouter);
 
   app.use(express.static(require('node:path').join(__dirname, '../../web')));
   app.use((error, req, res, next) => {

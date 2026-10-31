@@ -8,11 +8,11 @@
     "start": "node apps/api/src/server.js",
     "db:migrate": "node database/migrate.js",
     "db:seed": "node database/seed.js",
-    "test": "node --test tests/unit/pricing.test.js tests/integration/catalog.test.js",
+    "test": "node --test tests/unit/pricing.test.js tests/integration/catalog.test.js tests/integration/customers_staff.test.js",
     "test:unit": "node --test tests/unit/pricing.test.js",
-    "test:integration": "node --test tests/integration/catalog.test.js",
+    "test:integration": "node --test tests/integration/catalog.test.js tests/integration/customers_staff.test.js",
     "test:e2e": "node --test tests/e2e/phase1.test.js",
-    "check": "node --check apps/api/src/server.js && node --check apps/api/src/app.js && node --check apps/api/src/routes/catalog.js && node --check apps/api/src/domain/pricing.js && node --check database/migrate.js && node --check database/seed.js",
+    "check": "node --check apps/api/src/server.js && node --check apps/api/src/app.js && node --check apps/api/src/routes/catalog.js && node --check apps/api/src/routes/staff.js && node --check apps/api/src/routes/customers.js && node --check apps/api/src/domain/pricing.js && node --check database/migrate.js && node --check database/seed.js",
     "build": "node scripts/build.js"
   },
   "engines": {
