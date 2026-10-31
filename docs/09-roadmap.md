@@ -8,7 +8,7 @@
 
 **Exit:** signed-off requirements and architecture decisions.
 
-## Phase 1: Foundation and access (Complete)
+## Phase 1: Foundation and access (Complete & Certified)
 
 - Monorepo and CI.
 - Database migrations and seed data.
@@ -17,7 +17,7 @@
 
 **Exit:** users can securely access the correct role experience. Certified via `tests/e2e/phase1.test.js`.
 
-## Phase 2: Catalogue and sales (Complete)
+## Phase 2: Catalogue and sales (Complete & Certified)
 
 - Products, variants, plans, tax rules, discount rules.
 - Customers and staff administration.
@@ -25,7 +25,7 @@
 
 **Exit:** a valid quotation can become a confirmed subscription with a calculation breakdown. Certified via `tests/e2e/phase2.test.js`.
 
-## Phase 3: Subscription billing (Complete)
+## Phase 3: Subscription billing (Complete & Certified)
 
 - Subscription lifecycle and schedules (activate, pause, resume, renew, close).
 - Billing occurrence records and idempotent worker.
@@ -42,12 +42,12 @@
 
 **Exit:** finance can answer active, collected, owed, and overdue questions from the application. Certified via `tests/e2e/phase4.test.js`.
 
-## Phase 5: Hardening and launch
+## Phase 5: Hardening and launch (Complete & Certified)
 
 - Performance, accessibility, security, restore, and failure-mode validation.
 - Monitoring, alerts, runbooks, support training, and staged rollout.
 
-**Exit:** production readiness checklist is complete.
+**Exit:** production readiness checklist is complete. Certified via `tests/e2e/phase5.test.js`, [Production Readiness Checklist](./12-production-readiness-checklist.md), [Operational Runbooks](./runbooks/), [Support Training Guide](./10-support-training.md), and [Staged Rollout Plan](./11-staged-rollout.md).
 
 ## Interesting follow-on features
 
