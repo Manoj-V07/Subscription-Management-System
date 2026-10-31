@@ -16,15 +16,18 @@ async function start() {
   let pool;
   const dbUrl = process.env.DATABASE_URL;
 
-  if (dbUrl) {
+  if (process.env.USE_MEMORY_DB === 'true') {
+    console.log('[Storage] Fast-boot mode: Initializing in-memory database & demo dataset.');
+    pool = createMemoryPool();
+  } else if (dbUrl) {
     try {
-      const probeClient = new Client({ connectionString: dbUrl, connectionTimeoutMillis: 1500 });
+      const probeClient = new Client({ connectionString: dbUrl, connectionTimeoutMillis: 500 });
       await probeClient.connect();
       await probeClient.end();
       pool = new Pool({ connectionString: dbUrl, max: 10 });
       console.log(`[Storage] Connected to PostgreSQL at ${dbUrl}`);
     } catch (err) {
-      console.log(`[Storage] PostgreSQL connection failed (${err.message}).`);
+      console.log(`[Storage] PostgreSQL unavailable (${err.message}).`);
       console.log(`[Storage] Seamlessly running with in-memory database & pre-seeded demo dataset.`);
       pool = createMemoryPool();
     }
