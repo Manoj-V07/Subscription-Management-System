@@ -1,0 +1,26 @@
+{
+  "name": "brightloop-subscription-management",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Brightloop subscription management system",
+  "scripts": {
+    "dev": "node apps/api/src/server.js",
+    "start": "node apps/api/src/server.js",
+    "db:migrate": "node database/migrate.js",
+    "db:seed": "node database/seed.js",
+    "test": "node --test",
+    "test:e2e": "node --test tests/e2e/phase1.test.js",
+    "check": "node --check apps/api/src/server.js && node --check apps/api/src/app.js && node --check database/migrate.js && node --check database/seed.js",
+    "build": "node scripts/build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  }
+}

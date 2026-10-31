@@ -65,6 +65,20 @@ The project implementation should follow [`docs/06-build-and-delivery.md`](./doc
 
 ## Status
 
-**Phase:** Product and engineering documentation  
-**Next step:** Approve the documented scope and recommended stack, then scaffold the monorepo and implement Phase 1 from the roadmap.
+**Phase:** Phase 1 foundation and access implemented
+**Next step:** Review the Phase 1 workflow, then implement catalogue and sales in Phase 2.
 
+## Phase 1 status
+
+The initial runnable slice includes:
+
+- PostgreSQL schema, migrations, and deterministic seed data.
+- Customer registration with password policy validation.
+- JWT login, protected sessions, role and permission resolution.
+- Password reset request/completion flow with a development-only reset-token header.
+- Append-only audit events for identity actions.
+- Admin dashboard and audit endpoints.
+- Responsive login/registration web shell.
+- End-to-end workflow tests and build/syntax checks.
+
+For local setup, copy [`.env.example`](./.env.example) to `.env`, start PostgreSQL with `docker compose up -d postgres`, then run `npm install`, `npm run db:migrate`, `npm run db:seed`, and `npm start`.

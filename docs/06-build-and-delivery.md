@@ -11,32 +11,34 @@
 
 ## 2. Bootstrap procedure
 
-Once application scaffolding is added:
+The Phase 1 application scaffold is now present in `apps/`, `database/`, `scripts/`, and `tests/`. Use:
 
 ```powershell
 git clone <repository-url>
 Set-Location D:\Odoo-Kochi
 Copy-Item .env.example .env
 docker compose up -d postgres redis
-<package-manager> install
-<package-manager> run db:migrate
-<package-manager> run db:seed
-<package-manager> run dev
+npm install
+npm run db:migrate
+npm run db:seed
+npm start
 ```
 
-The actual package-manager commands MUST be recorded in the root package manifest and kept consistent with CI. Startup MUST fail with a clear configuration error when required variables are missing.
+The root package manifest records the commands and CI MUST use the same commands. Startup fails with a clear configuration error when required variables are missing.
+
+The seeded development administrator is `admin@brightloop.example` with password `Admin@12345`. Change or remove this seed credential before any shared environment is used.
 
 ## 3. Recommended implementation order
 
-1. Create monorepo, linting, formatting, type checking, environment validation, and CI.
-2. Add PostgreSQL migrations, seed data, money/time utilities, and calculation tests.
-3. Implement identity, sessions, roles, policies, and audit events.
+1. Create monorepo, linting, formatting, type checking, environment validation, and CI. **Complete for Phase 1 baseline.**
+2. Add PostgreSQL migrations, seed data, money/time utilities, and calculation tests. **Schema and seed baseline complete; financial utilities continue in Phase 2.**
+3. Implement identity, sessions, roles, policies, and audit events. **Complete for Phase 1 baseline.**
 4. Implement products, variants, plans, taxes, and discounts.
 5. Implement customers, quotation templates, quotations, and conversion.
 6. Implement subscription state machine and schedule calculation.
 7. Implement billing occurrences, worker queue, invoice generation, and retry handling.
 8. Implement invoice actions, PDFs, payment recording, and balance updates.
-9. Implement internal UI workflows and customer portal.
+9. Implement internal UI workflows and customer portal. **Phase 1 shell complete; full workflows are scheduled for later phases.**
 10. Implement dashboard queries, exports, notifications, and operational tooling.
 11. Run security, contract, integration, performance, accessibility, and backup-restore validation.
 
@@ -83,4 +85,3 @@ Protected branches MUST require green checks and at least one review for changes
 - Database backup and restore evidence is current.
 - OpenAPI and migration notes are published.
 - Support team has runbooks for failed billing, duplicate payment reports, and account recovery.
-

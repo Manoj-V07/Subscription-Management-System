@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brightloop | Subscription operations</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="brand"><span class="brand-mark">B</span><span>brightloop</span></div>
+        <span class="eyebrow">Subscription operations</span>
+        <h1>One calm view of recurring revenue.</h1>
+        <p>Manage customers, access, and billing workflows from a single operational home.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#login">Open workspace</a>
+          <a class="button secondary" href="#register">Create account</a>
+        </div>
+      </section>
+      <section class="workspace" id="login">
+        <div class="panel">
+          <div class="panel-heading"><span class="eyebrow">Phase 1 foundation</span><h2>Sign in</h2><p>Use your Brightloop workspace credentials.</p></div>
+          <form id="login-form">
+            <label>Email<input name="email" type="email" value="admin@brightloop.example" required /></label>
+            <label>Password<input name="password" type="password" value="Admin@12345" required /></label>
+            <button class="button primary" type="submit">Sign in</button>
+            <p class="form-message" id="login-message" role="status"></p>
+          </form>
+        </div>
+        <div class="panel summary" id="dashboard">
+          <span class="eyebrow">Workspace preview</span>
+          <h2>Access with confidence.</h2>
+          <div class="metrics"><div><strong>3</strong><span>roles</span></div><div><strong>9</strong><span>permissions</span></div><div><strong>24/7</strong><span>audit trail</span></div></div>
+          <p>After sign-in, your role and permissions determine the workspace you can see. Customers never see another customer’s records.</p>
+        </div>
+      </section>
+      <section class="panel register" id="register">
+        <div class="panel-heading"><span class="eyebrow">New to Brightloop?</span><h2>Create a customer account</h2><p>Password rules are enforced before an account is created.</p></div>
+        <form id="register-form">
+          <label>Name<input name="displayName" required /></label><label>Email<input name="email" type="email" required /></label><label>Password<input name="password" type="password" required /></label>
+          <button class="button secondary" type="submit">Create account</button><p class="form-message" id="register-message" role="status"></p>
+        </form>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,1 +1,8 @@
 Subscription_Management_System.pdf
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
