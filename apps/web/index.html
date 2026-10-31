@@ -3,46 +3,303 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brightloop | Subscription operations</title>
+    <title>Brightloop | Subscription Operations</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="shell">
-      <section class="hero">
-        <div class="brand"><span class="brand-mark">B</span><span>brightloop</span></div>
-        <span class="eyebrow">Subscription operations</span>
-        <h1>One calm view of recurring revenue.</h1>
-        <p>Manage customers, access, and billing workflows from a single operational home.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#login">Open workspace</a>
-          <a class="button secondary" href="#register">Create account</a>
+      <!-- Top Navigation -->
+      <header class="top-nav">
+        <div class="brand">
+          <span class="brand-mark">B</span>
+          <span>brightloop</span>
         </div>
-      </section>
-      <section class="workspace" id="login">
+        <div id="auth-status" class="user-badge" style="display: none;">
+          <span id="user-display">Not signed in</span>
+          <span id="user-role" class="role-tag">Guest</span>
+          <button id="logout-button" class="button secondary sm" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <!-- Auth Section (Visible when not logged in) -->
+      <section id="auth-section" class="grid-2">
         <div class="panel">
-          <div class="panel-heading"><span class="eyebrow">Phase 1 foundation</span><h2>Sign in</h2><p>Use your Brightloop workspace credentials.</p></div>
+          <div class="panel-header">
+            <div>
+              <h2>Sign in</h2>
+              <p>Sign in to your Brightloop operational workspace.</p>
+            </div>
+          </div>
           <form id="login-form">
-            <label>Email<input name="email" type="email" value="admin@brightloop.example" required /></label>
-            <label>Password<input name="password" type="password" value="Admin@12345" required /></label>
+            <label>
+              Email
+              <input name="email" type="email" value="admin@brightloop.example" required />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" value="Admin@12345" required />
+            </label>
             <button class="button primary" type="submit">Sign in</button>
-            <p class="form-message" id="login-message" role="status"></p>
+            <p id="login-message" class="form-message" role="status"></p>
           </form>
         </div>
-        <div class="panel summary" id="dashboard">
-          <span class="eyebrow">Workspace preview</span>
-          <h2>Access with confidence.</h2>
-          <div class="metrics"><div><strong>3</strong><span>roles</span></div><div><strong>9</strong><span>permissions</span></div><div><strong>24/7</strong><span>audit trail</span></div></div>
-          <p>After sign-in, your role and permissions determine the workspace you can see. Customers never see another customer’s records.</p>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Create Account</h2>
+              <p>Create a self-service customer profile.</p>
+            </div>
+          </div>
+          <form id="register-form">
+            <label>
+              Full Name
+              <input name="displayName" placeholder="Jane Doe" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" placeholder="jane@example.com" required />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" placeholder="Min 9 chars, upper, lower, symbol" required />
+            </label>
+            <button class="button secondary" type="submit">Register</button>
+            <p id="register-message" class="form-message" role="status"></p>
+          </form>
         </div>
       </section>
-      <section class="panel register" id="register">
-        <div class="panel-heading"><span class="eyebrow">New to Brightloop?</span><h2>Create a customer account</h2><p>Password rules are enforced before an account is created.</p></div>
-        <form id="register-form">
-          <label>Name<input name="displayName" required /></label><label>Email<input name="email" type="email" required /></label><label>Password<input name="password" type="password" required /></label>
-          <button class="button secondary" type="submit">Create account</button><p class="form-message" id="register-message" role="status"></p>
-        </form>
+
+      <!-- Authenticated Phase 2 Workspace -->
+      <section id="workspace-section" style="display: none;">
+        <!-- Tabs Bar -->
+        <nav class="tabs-nav">
+          <button class="tab-button active" data-tab="quotes">Sales & Quotations</button>
+          <button class="tab-button" data-tab="subscriptions">Subscriptions</button>
+          <button class="tab-button" data-tab="customers">Customers</button>
+          <button class="tab-button" data-tab="catalog">Catalogue & Rules</button>
+        </nav>
+
+        <!-- TAB 1: Quotations & Sales Studio -->
+        <div id="tab-quotes" class="tab-content">
+          <div class="grid-2">
+            <!-- Quotation Builder -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Quotation Studio</h2>
+                  <p>Configure product lines, variant adjustments, and calculate taxes/discounts.</p>
+                </div>
+              </div>
+              <form id="create-quote-form">
+                <div class="form-row">
+                  <label>
+                    Customer
+                    <select id="quote-customer-select" required></select>
+                  </label>
+                  <label>
+                    Plan Tier
+                    <select id="quote-plan-select" required></select>
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Product Line
+                    <select id="quote-product-select" required></select>
+                  </label>
+                  <label>
+                    Variant / Add-on
+                    <select id="quote-variant-select">
+                      <option value="">No Variant (Base Price)</option>
+                    </select>
+                  </label>
+                  <label>
+                    Quantity
+                    <input id="quote-qty-input" type="number" min="1" value="1" required />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Discount Rule
+                    <select id="quote-discount-select">
+                      <option value="">No Discount</option>
+                    </select>
+                  </label>
+                  <label>
+                    Tax Rule
+                    <select id="quote-tax-select">
+                      <option value="">No Tax Rule</option>
+                    </select>
+                  </label>
+                </div>
+
+                <!-- Live Mathematical Calculation Breakdown -->
+                <div class="calculation-box">
+                  <div class="calc-row"><span>Line Subtotal</span><span id="preview-subtotal">₹0.00</span></div>
+                  <div class="calc-row"><span>Discount Applied</span><span id="preview-discount">-₹0.00</span></div>
+                  <div class="calc-row"><span>Taxable Base</span><span id="preview-taxable">₹0.00</span></div>
+                  <div class="calc-row"><span>Tax (GST)</span><span id="preview-tax">+₹0.00</span></div>
+                  <div class="calc-row total"><span>Grand Total</span><span id="preview-total" class="amount">₹0.00</span></div>
+                </div>
+
+                <button class="button primary" type="submit">Create Quotation</button>
+                <p id="quote-form-message" class="form-message" role="status"></p>
+              </form>
+            </div>
+
+            <!-- Quotations List -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Active Quotations</h2>
+                  <p>Progress quotation status and convert accepted quotes into subscriptions.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="quotations-table">
+                  <thead>
+                    <tr>
+                      <th>Quote #</th>
+                      <th>Customer</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Confirmed Subscriptions -->
+        <div id="tab-subscriptions" class="tab-content" style="display: none;">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Confirmed Subscriptions</h2>
+                <p>Immutable subscription records generated upon quotation conversion.</p>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="subscriptions-table">
+                <thead>
+                  <tr>
+                    <th>Subscription #</th>
+                    <th>Customer</th>
+                    <th>Plan</th>
+                    <th>Grand Total</th>
+                    <th>Balance Due</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Customers Directory -->
+        <div id="tab-customers" class="tab-content" style="display: none;">
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Customer Directory</h2>
+                  <p>Manage customer profiles and contacts.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="customers-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Tax ID</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Add Customer</h2>
+                  <p>Register a new client company profile.</p>
+                </div>
+              </div>
+              <form id="create-customer-form">
+                <label>Company / Legal Name<input name="name" required /></label>
+                <label>Email Address<input name="email" type="email" required /></label>
+                <label>Phone<input name="phone" placeholder="+91 98765 43210" /></label>
+                <label>Tax Identifier (GSTIN/VAT)<input name="taxIdentifier" placeholder="GSTIN29AABCU9603R1ZM" /></label>
+                <button class="button primary" type="submit">Save Customer</button>
+                <p id="customer-form-message" class="form-message" role="status"></p>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Catalogue & Rules -->
+        <div id="tab-catalog" class="tab-content" style="display: none;">
+          <div class="grid-2">
+            <!-- Products Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Products & Variants</h2>
+                  <p>Active items in your product catalogue.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="products-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Type</th>
+                      <th>Price</th>
+                      <th>Variants</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Plans & Rules Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Plans, Taxes & Discounts</h2>
+                  <p>Configured commercial rule sets.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="plans-table">
+                  <thead>
+                    <tr>
+                      <th>Plan Name</th>
+                      <th>Interval</th>
+                      <th>Min Qty</th>
+                      <th>Auto Renew</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
+
     <script src="/app.js"></script>
   </body>
 </html>
