@@ -13,19 +13,128 @@ const { createReportsRouter } = require('./routes/reports');
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}$/;
 
-function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
+function createRateLimiter({ windowMs = 60000, max = 60, keyGenerator = (req) => req.ip || '127.0.0.1' } = {}) {
+  const hits = new Map();
+  const cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of hits.entries()) {
+      if (entry.resetAt <= now) hits.delete(key);
+    }
+  }, windowMs);
+  if (cleanupTimer.unref) cleanupTimer.unref();
+
+  return (req, res, next) => {
+    const key = keyGenerator(req);
+    const now = Date.now();
+    let entry = hits.get(key);
+    if (!entry || entry.resetAt <= now) {
+      entry = { count: 1, resetAt: now + windowMs };
+      hits.set(key, entry);
+    } else {
+      entry.count += 1;
+    }
+    const remaining = Math.max(0, max - entry.count);
+    const resetSeconds = Math.ceil((entry.resetAt - now) / 1000);
+    res.setHeader('X-RateLimit-Limit', max);
+    res.setHeader('X-RateLimit-Remaining', remaining);
+    res.setHeader('X-RateLimit-Reset', resetSeconds);
+
+    if (entry.count > max) {
+      res.setHeader('Retry-After', resetSeconds);
+      return res.status(429).json({
+        error: {
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many requests, please try again later.',
+          retryAfterSeconds: resetSeconds,
+          requestId: res.getHeader('x-request-id'),
+        },
+      });
+    }
+    next();
+  };
+}
+
+function createApp({
+  pool,
+  jwtSecret,
+  jwtExpiresIn = '15m',
+  appOrigin = '*',
+  disableRateLimit = false,
+  authRateLimitMax = 60,
+  authRateLimitWindowMs = 60000,
+}) {
   const app = express();
   app.use(express.json({ limit: '100kb' }));
+
+  // Metrics registry
+  const metrics = {
+    totalRequests: 0,
+    statusCodes: { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 },
+    latencies: [],
+  };
+
+  function recordMetric(statusCode, durationMs) {
+    metrics.totalRequests += 1;
+    const bucket = `${Math.floor(statusCode / 100)}xx`;
+    if (metrics.statusCodes[bucket] !== undefined) {
+      metrics.statusCodes[bucket] += 1;
+    }
+    metrics.latencies.push(durationMs);
+    if (metrics.latencies.length > 500) {
+      metrics.latencies.shift();
+    }
+  }
+
+  function getLatencyPercentile(p) {
+    if (metrics.latencies.length === 0) return 0;
+    const sorted = [...metrics.latencies].sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+    return Number(sorted[idx].toFixed(2));
+  }
+
+  // Security Headers & Request Correlation Middleware
   app.use((req, res, next) => {
+    const startTime = process.hrtime.bigint();
     const requestId = req.header('x-request-id') || `req_${crypto.randomUUID()}`;
     req.requestId = requestId;
     res.setHeader('x-request-id', requestId);
+
+    // OWASP & Production Hardening Headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    );
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+
+    // CORS configuration
     res.setHeader('access-control-allow-origin', appOrigin);
-    res.setHeader('access-control-allow-headers', 'Content-Type, Authorization, X-Request-Id');
-    res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+    res.setHeader('access-control-allow-headers', 'Content-Type, Authorization, X-Request-Id, Idempotency-Key');
+    res.setHeader('access-control-allow-methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
+
     if (req.method === 'OPTIONS') return res.sendStatus(204);
+
+    res.on('finish', () => {
+      const durationMs = Number(process.hrtime.bigint() - startTime) / 1000000;
+      recordMetric(res.statusCode, durationMs);
+    });
+
     next();
   });
+
+  // Auth rate limiter
+  const authRateLimiter = disableRateLimit
+    ? (req, res, next) => next()
+    : createRateLimiter({
+        windowMs: authRateLimitWindowMs,
+        max: authRateLimitMax,
+      });
 
   function sendError(res, status, code, message, details = []) {
     return res.status(status).json({ error: { code, message, details, requestId: res.getHeader('x-request-id') } });
@@ -75,16 +184,83 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
     };
   }
 
+  // Health and Readiness Probes
   app.get('/health', async (req, res) => {
     try {
       await pool.query('SELECT 1');
-      res.json({ status: 'ok', service: 'brightloop-api', requestId: req.requestId });
+      res.json({
+        status: 'ok',
+        service: 'brightloop-api',
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        requestId: req.requestId,
+      });
     } catch (error) {
       sendError(res, 503, 'DEPENDENCY_UNAVAILABLE', 'Database is unavailable.');
     }
   });
 
-  app.post('/api/v1/auth/register', async (req, res) => {
+  app.get('/health/liveness', (req, res) => {
+    res.json({
+      status: 'ok',
+      service: 'brightloop-api',
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+      requestId: req.requestId,
+    });
+  });
+
+  app.get('/health/readiness', async (req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({
+        status: 'ready',
+        service: 'brightloop-api',
+        dependencies: {
+          database: 'connected',
+        },
+        timestamp: new Date().toISOString(),
+        requestId: req.requestId,
+      });
+    } catch (error) {
+      res.status(503).json({
+        error: {
+          code: 'DEPENDENCY_UNAVAILABLE',
+          message: 'Database is unavailable.',
+          dependencies: {
+            database: 'disconnected',
+          },
+          requestId: req.requestId,
+        },
+      });
+    }
+  });
+
+  // Operational Metrics Endpoint
+  app.get(['/health/metrics', '/api/v1/metrics'], (req, res) => {
+    res.json({
+      service: 'brightloop-api',
+      uptimeSeconds: Math.floor(process.uptime()),
+      memory: process.memoryUsage(),
+      requests: {
+        total: metrics.totalRequests,
+        status_2xx: metrics.statusCodes['2xx'],
+        status_3xx: metrics.statusCodes['3xx'],
+        status_4xx: metrics.statusCodes['4xx'],
+        status_5xx: metrics.statusCodes['5xx'],
+        latencyMs: {
+          p50: getLatencyPercentile(50),
+          p90: getLatencyPercentile(90),
+          p95: getLatencyPercentile(95),
+          p99: getLatencyPercentile(99),
+        },
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Authentication routes with Rate Limiter
+  app.post('/api/v1/auth/register', authRateLimiter, async (req, res) => {
     const { email, password, displayName } = req.body || {};
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const details = [];
@@ -109,7 +285,7 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
     }
   });
 
-  app.post('/api/v1/auth/login', async (req, res) => {
+  app.post('/api/v1/auth/login', authRateLimiter, async (req, res) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const password = req.body?.password;
     try {
@@ -139,7 +315,7 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
     res.json({ data: { id: req.user.id, email: req.user.email, displayName: req.user.display_name, role: req.user.role, permissions: req.user.permissions } });
   });
 
-  app.post('/api/v1/auth/forgot-password', async (req, res) => {
+  app.post('/api/v1/auth/forgot-password', authRateLimiter, async (req, res) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const result = await pool.query('SELECT id FROM users WHERE email = $1 AND status = $2', [email, 'active']);
     if (result.rowCount) {
@@ -152,7 +328,7 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
     res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } });
   });
 
-  app.post('/api/v1/auth/reset-password', async (req, res) => {
+  app.post('/api/v1/auth/reset-password', authRateLimiter, async (req, res) => {
     const { token, password } = req.body || {};
     if (typeof token !== 'string' || typeof password !== 'string' || !PASSWORD_PATTERN.test(password)) return sendError(res, 400, 'VALIDATION_ERROR', 'A valid token and password are required.');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
