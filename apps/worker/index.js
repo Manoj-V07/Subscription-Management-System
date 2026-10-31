@@ -7,6 +7,7 @@
 require('dotenv').config();
 const { Client } = require('pg');
 const { executeBillingRun } = require('../api/src/domain/billing-worker');
+const { createMemoryPool } = require('../api/src/domain/memory-pool');
 
 const databaseUrl = process.env.DATABASE_URL || 'postgres://brightloop:brightloop@localhost:5432/brightloop';
 const pollIntervalMs = Number(process.env.WORKER_POLL_INTERVAL_MS) || 60000;
@@ -45,9 +46,20 @@ async function runWorkerOnce(client) {
 }
 
 async function startWorker() {
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  console.log('[Worker] Brightloop Billing Worker connected to PostgreSQL.');
+  let client;
+  if (databaseUrl) {
+    try {
+      const probe = new Client({ connectionString: databaseUrl, connectionTimeoutMillis: 1500 });
+      await probe.connect();
+      client = probe;
+      console.log('[Worker] Brightloop Billing Worker connected to PostgreSQL.');
+    } catch (err) {
+      console.log(`[Worker] PostgreSQL unavailable (${err.message}). Running with in-memory worker engine.`);
+      client = createMemoryPool();
+    }
+  } else {
+    client = createMemoryPool();
+  }
 
   // Immediate first run
   await runWorkerOnce(client);
@@ -58,7 +70,9 @@ async function startWorker() {
   const shutdown = async () => {
     console.log('[Worker] Shutting down billing worker...');
     clearInterval(timer);
-    await client.end();
+    if (client && typeof client.end === 'function') {
+      await client.end();
+    }
     process.exit(0);
   };
 
