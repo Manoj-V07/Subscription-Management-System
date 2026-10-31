@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { createCatalogRouter } = require('./routes/catalog');
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}$/;
 
@@ -179,6 +180,9 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
     );
     res.json({ data: result.rows });
   });
+
+  const catalogRouter = createCatalogRouter({ pool, audit, sendError, authenticate, requirePermission });
+  app.use('/api/v1', catalogRouter);
 
   app.use(express.static(require('node:path').join(__dirname, '../../web')));
   app.use((error, req, res, next) => {
