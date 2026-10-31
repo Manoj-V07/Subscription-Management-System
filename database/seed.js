@@ -72,11 +72,14 @@ async function main() {
     );
 
     // Seed Phase 2 default Tax Rule: GST 18%
-    const taxRes = await client.query(
-      `INSERT INTO tax_rules (name, rate_percentage, jurisdiction)
-       VALUES ('GST 18%', 18.00, 'IN')
-       RETURNING id`,
-    );
+    let taxRes = await client.query("SELECT id FROM tax_rules WHERE name = 'GST 18%'");
+    if (!taxRes.rowCount) {
+      taxRes = await client.query(
+        `INSERT INTO tax_rules (name, rate_percentage, jurisdiction)
+         VALUES ('GST 18%', 18.00, 'IN')
+         RETURNING id`,
+      );
+    }
     const taxRuleId = taxRes.rows[0]?.id;
 
     // Seed Phase 2 default Discount Rule: Launch 10%
@@ -87,11 +90,14 @@ async function main() {
     );
 
     // Seed Phase 2 default Product & Variants
-    const prodRes = await client.query(
-      `INSERT INTO products (name, product_type, sales_price_cents, cost_price_cents, currency, notes)
-       VALUES ('Brightloop Platform Core', 'service', 250000, 50000, 'INR', 'Core SaaS platform subscription tier')
-       RETURNING id`,
-    );
+    let prodRes = await client.query("SELECT id FROM products WHERE name = 'Brightloop Platform Core'");
+    if (!prodRes.rowCount) {
+      prodRes = await client.query(
+        `INSERT INTO products (name, product_type, sales_price_cents, cost_price_cents, currency, notes)
+         VALUES ('Brightloop Platform Core', 'service', 250000, 50000, 'INR', 'Core SaaS platform subscription tier')
+         RETURNING id`,
+      );
+    }
     const productId = prodRes.rows[0]?.id;
 
     if (productId) {
@@ -115,13 +121,15 @@ async function main() {
     );
 
     // Seed Phase 2 Sample Customer
-    await client.query(
-      `INSERT INTO customers (name, email, phone, billing_address, tax_identifier)
-       VALUES ('Acme Software Ltd', 'billing@acme.example', '+91 98765 43210', '{"street": "100 Tech Park", "city": "Bengaluru", "state": "Karnataka", "country": "IN", "postal_code": "560001"}', 'GSTIN29AABCU9603R1ZM')`,
-    );
-
+    const custExists = await client.query("SELECT id FROM customers WHERE email = 'billing@acme.example'");
+    if (!custExists.rowCount) {
+      await client.query(
+        `INSERT INTO customers (name, email, phone, billing_address, tax_identifier)
+         VALUES ('Acme Software Ltd', 'billing@acme.example', '+91 98765 43210', '{"street": "100 Tech Park", "city": "Bengaluru", "state": "Karnataka", "country": "IN", "postal_code": "560001"}', 'GSTIN29AABCU9603R1ZM')`,
+      );
+    }
     await client.query('COMMIT');
-    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345 with Phase 3 catalogue, subscriptions, and billing engine.');
+    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345 with catalogue, subscriptions, billing, and payments engine.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
