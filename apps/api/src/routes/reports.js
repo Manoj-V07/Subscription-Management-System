@@ -4,15 +4,60 @@ const { reconcileFinanceData, calculateOverdueDays, generateCsv } = require('../
 function createReportsRouter({ pool, audit, sendError, authenticate, requirePermission }) {
   const router = express.Router();
 
+  function addFilter(filters, params, clause, value) {
+    if (value === undefined || value === null || value === '') return;
+    params.push(value);
+    filters.push(clause.replace('?', `$${params.length}`));
+  }
+
   // GET /api/v1/reports/summary
   // Directly fulfills Phase 4 Exit Criterion:
   // "finance can answer active, collected, owed, and overdue questions from the application"
   router.get('/reports/summary', authenticate, requirePermission('reports.read'), async (req, res) => {
     try {
+      const hasFilters = ['dateFrom', 'dateTo', 'customerId', 'status', 'planId', 'paymentMethod', 'currency']
+        .some((key) => req.query[key]);
+      let invoicesQuery = 'SELECT id, status, due_date, grand_total_cents, balance_due_cents, currency FROM invoices';
+      let paymentsQuery = 'SELECT id, amount_cents, currency, received_date FROM payments';
+      let subscriptionsQuery = 'SELECT id, status, grand_total_cents FROM subscriptions';
+      const invoiceParams = [];
+      const paymentParams = [];
+      const subscriptionParams = [];
+      if (hasFilters) {
+        const invoiceFilters = [];
+        addFilter(invoiceFilters, invoiceParams, 'i.issue_date >= ?', req.query.dateFrom);
+        addFilter(invoiceFilters, invoiceParams, 'i.issue_date <= ?', req.query.dateTo);
+        addFilter(invoiceFilters, invoiceParams, 'i.customer_id = ?', req.query.customerId);
+        addFilter(invoiceFilters, invoiceParams, 'i.status = ?', req.query.status);
+        addFilter(invoiceFilters, invoiceParams, 's.plan_id = ?', req.query.planId);
+        addFilter(invoiceFilters, invoiceParams, 'i.currency = ?', req.query.currency);
+        invoicesQuery = `SELECT i.id, i.status, i.due_date, i.grand_total_cents, i.balance_due_cents, i.currency
+                         FROM invoices i
+                         LEFT JOIN subscriptions s ON s.id = i.subscription_id
+                         WHERE ${invoiceFilters.length ? invoiceFilters.join(' AND ') : '1=1'}`;
+        const paymentFilters = [];
+        addFilter(paymentFilters, paymentParams, 'p.received_date >= ?', req.query.dateFrom);
+        addFilter(paymentFilters, paymentParams, 'p.received_date <= ?', req.query.dateTo);
+        addFilter(paymentFilters, paymentParams, 'p.customer_id = ?', req.query.customerId);
+        addFilter(paymentFilters, paymentParams, 'p.method = ?', req.query.paymentMethod);
+        addFilter(paymentFilters, paymentParams, 'p.currency = ?', req.query.currency);
+        paymentsQuery = `SELECT p.id, p.amount_cents, p.currency, p.received_date
+                         FROM payments p
+                         WHERE ${paymentFilters.length ? paymentFilters.join(' AND ') : '1=1'}`;
+        const subscriptionFilters = [];
+        addFilter(subscriptionFilters, subscriptionParams, 's.status = ?', req.query.status);
+        addFilter(subscriptionFilters, subscriptionParams, 's.customer_id = ?', req.query.customerId);
+        addFilter(subscriptionFilters, subscriptionParams, 's.plan_id = ?', req.query.planId);
+        addFilter(subscriptionFilters, subscriptionParams, 's.currency = ?', req.query.currency);
+        subscriptionsQuery = `SELECT s.id, s.status, s.grand_total_cents
+                              FROM subscriptions s
+                              WHERE ${subscriptionFilters.length ? subscriptionFilters.join(' AND ') : '1=1'}`;
+      }
+
       const [invoicesRes, paymentsRes, subsRes] = await Promise.all([
-        pool.query('SELECT id, status, due_date, grand_total_cents, balance_due_cents, currency FROM invoices'),
-        pool.query('SELECT id, amount_cents, currency, received_date FROM payments'),
-        pool.query('SELECT id, status, grand_total_cents FROM subscriptions'),
+        pool.query(invoicesQuery, invoiceParams),
+        pool.query(paymentsQuery, paymentParams),
+        pool.query(subscriptionsQuery, subscriptionParams),
       ]);
 
       const summary = reconcileFinanceData({
@@ -114,19 +159,32 @@ function createReportsRouter({ pool, audit, sendError, authenticate, requirePerm
   // GET /api/v1/reports/revenue
   router.get('/reports/revenue', authenticate, requirePermission('reports.read'), async (req, res) => {
     try {
+      const hasFilters = ['dateFrom', 'dateTo', 'customerId', 'paymentMethod', 'currency'].some((key) => req.query[key]);
+      const filters = [];
+      const params = [];
+      if (hasFilters) {
+        addFilter(filters, params, 'p.received_date >= ?', req.query.dateFrom);
+        addFilter(filters, params, 'p.received_date <= ?', req.query.dateTo);
+        addFilter(filters, params, 'p.customer_id = ?', req.query.customerId);
+        addFilter(filters, params, 'p.method = ?', req.query.paymentMethod);
+        addFilter(filters, params, 'p.currency = ?', req.query.currency);
+      }
+      const whereClause = filters.length ? ` WHERE ${filters.join(' AND ')}` : '';
       const [byMethodRes, byMonthRes] = await Promise.all([
         pool.query(
-          `SELECT method, COUNT(*)::int AS count, SUM(amount_cents)::int AS total_cents
-           FROM payments
-           GROUP BY method ORDER BY total_cents DESC`,
+          `SELECT p.method, COUNT(*)::int AS count, SUM(p.amount_cents)::int AS total_cents
+           FROM payments p${whereClause}
+           GROUP BY p.method ORDER BY total_cents DESC`,
+          params,
         ),
         pool.query(
-          `SELECT TO_CHAR(received_date, 'YYYY-MM') AS month,
+          `SELECT TO_CHAR(p.received_date, 'YYYY-MM') AS month,
                   COUNT(*)::int AS count,
-                  SUM(amount_cents)::int AS total_cents
-           FROM payments
-           GROUP BY TO_CHAR(received_date, 'YYYY-MM')
+                  SUM(p.amount_cents)::int AS total_cents
+           FROM payments p${whereClause}
+           GROUP BY TO_CHAR(p.received_date, 'YYYY-MM')
            ORDER BY month DESC LIMIT 12`,
+          params,
         ),
       ]);
 

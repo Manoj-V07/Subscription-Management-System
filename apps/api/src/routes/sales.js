@@ -5,6 +5,13 @@ const { canTransitionSubscription, addBillingInterval } = require('../domain/bil
 function createSalesRouter({ pool, audit, sendError, authenticate, requirePermission }) {
   const router = express.Router();
 
+  function canManageSubscription(req, subscription) {
+    const hasStaffPermission =
+      req.user.permissions.includes('subscriptions.manage') ||
+      req.user.permissions.includes('customers.read');
+    return hasStaffPermission || subscription.user_id === req.user.id;
+  }
+
   // ==========================================
   // QUOTATION TEMPLATES
   // ==========================================
@@ -749,11 +756,20 @@ function createSalesRouter({ pool, audit, sendError, authenticate, requirePermis
   });
 
   // POST /api/v1/subscriptions/:id/pause
-  router.post('/subscriptions/:id/pause', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+  router.post('/subscriptions/:id/pause', authenticate, async (req, res) => {
     try {
-      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      const subRes = await pool.query(
+        `SELECT s.*, c.user_id, p.allow_pause
+         FROM subscriptions s
+         JOIN customers c ON c.id = s.customer_id
+         JOIN plans p ON p.id = s.plan_id
+         WHERE s.id = $1`,
+        [req.params.id],
+      );
       if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
       const sub = subRes.rows[0];
+      if (!canManageSubscription(req, sub)) return sendError(res, 403, 'FORBIDDEN', 'Access to subscription denied.');
+      if (sub.allow_pause === false) return sendError(res, 400, 'INVALID_OPERATION', 'This plan does not allow pausing.');
 
       if (!canTransitionSubscription(sub.status, 'paused')) {
         return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be paused.`);
@@ -780,11 +796,20 @@ function createSalesRouter({ pool, audit, sendError, authenticate, requirePermis
   });
 
   // POST /api/v1/subscriptions/:id/resume
-  router.post('/subscriptions/:id/resume', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+  router.post('/subscriptions/:id/resume', authenticate, async (req, res) => {
     try {
-      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      const subRes = await pool.query(
+        `SELECT s.*, c.user_id, p.allow_pause
+         FROM subscriptions s
+         JOIN customers c ON c.id = s.customer_id
+         JOIN plans p ON p.id = s.plan_id
+         WHERE s.id = $1`,
+        [req.params.id],
+      );
       if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
       const sub = subRes.rows[0];
+      if (!canManageSubscription(req, sub)) return sendError(res, 403, 'FORBIDDEN', 'Access to subscription denied.');
+      if (sub.allow_pause === false) return sendError(res, 400, 'INVALID_OPERATION', 'This plan does not allow pausing.');
 
       if (!canTransitionSubscription(sub.status, 'active')) {
         return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be resumed.`);
@@ -853,12 +878,21 @@ function createSalesRouter({ pool, audit, sendError, authenticate, requirePermis
   });
 
   // POST /api/v1/subscriptions/:id/close
-  router.post('/subscriptions/:id/close', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+  router.post('/subscriptions/:id/close', authenticate, async (req, res) => {
     const { reason = null } = req.body || {};
     try {
-      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      const subRes = await pool.query(
+        `SELECT s.*, c.user_id, p.allow_early_close
+         FROM subscriptions s
+         JOIN customers c ON c.id = s.customer_id
+         JOIN plans p ON p.id = s.plan_id
+         WHERE s.id = $1`,
+        [req.params.id],
+      );
       if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
       const sub = subRes.rows[0];
+      if (!canManageSubscription(req, sub)) return sendError(res, 403, 'FORBIDDEN', 'Access to subscription denied.');
+      if (sub.allow_early_close === false) return sendError(res, 400, 'INVALID_OPERATION', 'This plan does not allow early closure.');
 
       if (!canTransitionSubscription(sub.status, 'closed')) {
         return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be closed.`);

@@ -17,6 +17,7 @@
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/auth/register` | Register customer account |
+| POST | `/auth/verify-email` | Verify a customer email with a single-use token |
 | POST | `/auth/login` | Start session |
 | POST | `/auth/refresh` | Rotate refresh token |
 | POST | `/auth/logout` | Revoke current session |
@@ -102,4 +103,3 @@ The worker computes a key such as `subscriptionId:billingPeriodStart:billingPeri
 ## 7. OpenAPI and versioning
 
 The API MUST publish an OpenAPI document generated from the source contracts. Breaking changes require a new version or a migration period. Contract tests MUST verify documented status codes, schemas, authorization, and error shapes.
-

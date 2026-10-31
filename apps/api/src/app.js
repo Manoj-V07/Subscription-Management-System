@@ -148,6 +148,24 @@ function createApp({
     );
   }
 
+  function createOpaqueToken() {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  function hashOpaqueToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  async function issueRefreshToken(userId) {
+    const rawToken = createOpaqueToken();
+    await pool.query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 days')`,
+      [userId, hashOpaqueToken(rawToken)],
+    );
+    return rawToken;
+  }
+
   async function loadUser(userId) {
     const result = await pool.query(
       `SELECT u.id, u.email, u.display_name, u.status, r.name AS role,
@@ -278,8 +296,15 @@ function createApp({
          VALUES ($1, $2, $3, $4) RETURNING id, email, display_name, status`,
         [normalizedEmail, passwordHash, displayName.trim(), role.rows[0].id],
       );
+      const verificationToken = createOpaqueToken();
+      await pool.query(
+        `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+        [result.rows[0].id, hashOpaqueToken(verificationToken)],
+      );
       await audit({ actorUserId: result.rows[0].id, action: 'account.registered', entityType: 'user', entityId: result.rows[0].id, requestId: req.requestId });
-      res.status(201).json({ data: { user: result.rows[0], message: 'Account created. Email verification will be added in the next identity slice.' } });
+      if (process.env.NODE_ENV !== 'production') res.setHeader('x-development-verification-token', verificationToken);
+      res.status(201).json({ data: { user: result.rows[0], message: 'Account created. Check your email to verify the account.' } });
     } catch (error) {
       sendError(res, 500, 'INTERNAL_ERROR', 'Unable to create the account.');
     }
@@ -299,16 +324,131 @@ function createApp({
       }
       await pool.query('UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1', [user.id]);
       const token = jwt.sign({ sub: user.id, role: user.role }, jwtSecret, { expiresIn: jwtExpiresIn });
+      const refreshToken = await issueRefreshToken(user.id);
       await audit({ actorUserId: user.id, action: 'auth.login', entityType: 'user', entityId: user.id, requestId: req.requestId });
-      res.json({ data: { accessToken: token, user: { id: user.id, email: user.email, displayName: user.display_name, role: user.role } } });
+      res.json({ data: { accessToken: token, refreshToken, user: { id: user.id, email: user.email, displayName: user.display_name, role: user.role } } });
     } catch (error) {
       sendError(res, 500, 'INTERNAL_ERROR', 'Unable to sign in.');
     }
   });
 
   app.post('/api/v1/auth/logout', authenticate, async (req, res) => {
+    const refreshToken = typeof req.body?.refreshToken === 'string' ? req.body.refreshToken : null;
+    if (refreshToken) {
+      await pool.query(
+        'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1 AND user_id = $2 AND revoked_at IS NULL',
+        [hashOpaqueToken(refreshToken), req.user.id],
+      );
+    }
     await audit({ actorUserId: req.user.id, action: 'auth.logout', entityType: 'user', entityId: req.user.id, requestId: req.requestId });
     res.status(204).send();
+  });
+
+  app.post('/api/v1/auth/refresh', authRateLimiter, async (req, res) => {
+    const refreshToken = typeof req.body?.refreshToken === 'string' ? req.body.refreshToken : '';
+    if (!refreshToken) return sendError(res, 400, 'VALIDATION_ERROR', 'A refresh token is required.');
+
+    try {
+      const tokenHash = hashOpaqueToken(refreshToken);
+      const found = await pool.query(
+        `SELECT rt.id, rt.user_id, u.email, u.display_name, u.status, r.name AS role
+         FROM refresh_tokens rt
+         JOIN users u ON u.id = rt.user_id
+         JOIN roles r ON r.id = u.role_id
+         WHERE rt.token_hash = $1 AND rt.revoked_at IS NULL AND rt.expires_at > NOW()`,
+        [tokenHash],
+      );
+      if (!found.rowCount || found.rows[0].status !== 'active') {
+        return sendError(res, 401, 'INVALID_REFRESH_TOKEN', 'The refresh token is invalid or expired.');
+      }
+
+      await pool.query('BEGIN');
+      let nextRefreshToken;
+      try {
+        const revoked = await pool.query(
+          'UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL RETURNING id',
+          [found.rows[0].id],
+        );
+        if (!revoked.rowCount) {
+          await pool.query('ROLLBACK');
+          return sendError(res, 401, 'INVALID_REFRESH_TOKEN', 'The refresh token is invalid or expired.');
+        }
+        nextRefreshToken = await issueRefreshToken(found.rows[0].user_id);
+        await pool.query('COMMIT');
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        throw error;
+      }
+      const accessToken = jwt.sign(
+        { sub: found.rows[0].user_id, role: found.rows[0].role },
+        jwtSecret,
+        { expiresIn: jwtExpiresIn },
+      );
+      await audit({
+        actorUserId: found.rows[0].user_id,
+        action: 'auth.refresh',
+        entityType: 'user',
+        entityId: found.rows[0].user_id,
+        requestId: req.requestId,
+      });
+      res.json({
+        data: {
+          accessToken,
+          refreshToken: nextRefreshToken,
+          user: {
+            id: found.rows[0].user_id,
+            email: found.rows[0].email,
+            displayName: found.rows[0].display_name,
+            role: found.rows[0].role,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to refresh the session.');
+    }
+  });
+
+  app.post('/api/v1/auth/verify-email', authRateLimiter, async (req, res) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    if (!token) return sendError(res, 400, 'VALIDATION_ERROR', 'A verification token is required.');
+
+    try {
+      const found = await pool.query(
+        `SELECT id, user_id
+         FROM email_verification_tokens
+         WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()`,
+        [hashOpaqueToken(token)],
+      );
+      if (!found.rowCount) return sendError(res, 400, 'INVALID_VERIFICATION_TOKEN', 'The verification token is invalid or expired.');
+
+      await pool.query('BEGIN');
+      try {
+        await pool.query(
+          'UPDATE users SET email_verified_at = NOW(), updated_at = NOW() WHERE id = $1',
+          [found.rows[0].user_id],
+        );
+        await pool.query('UPDATE email_verification_tokens SET used_at = NOW() WHERE id = $1', [found.rows[0].id]);
+        await audit({
+          actorUserId: found.rows[0].user_id,
+          action: 'auth.email_verified',
+          entityType: 'user',
+          entityId: found.rows[0].user_id,
+          requestId: req.requestId,
+        });
+        await pool.query('COMMIT');
+        res.json({ data: { message: 'Email verification completed.' } });
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        throw error;
+      }
+    } catch (error) {
+      if (error.code === 'INVALID_VERIFICATION_TOKEN') {
+        return sendError(res, 400, error.code, error.message);
+      }
+      console.error('Error verifying email:', error);
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to verify the email address.');
+    }
   });
 
   app.get('/api/v1/auth/me', authenticate, (req, res) => {

@@ -2,6 +2,7 @@
 
 const state = {
   token: sessionStorage.getItem('brightloop_access_token') || null,
+  refreshToken: sessionStorage.getItem('brightloop_refresh_token') || null,
   user: null,
   customers: [],
   products: [],
@@ -77,7 +78,9 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   try {
     const res = await api('/api/v1/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) });
     state.token = res.data.accessToken;
+    state.refreshToken = res.data.refreshToken;
     sessionStorage.setItem('brightloop_access_token', state.token);
+    sessionStorage.setItem('brightloop_refresh_token', state.refreshToken);
     state.user = res.data.user;
     initWorkspace();
   } catch (err) {
@@ -98,10 +101,12 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
 });
 
 document.getElementById('logout-button')?.addEventListener('click', async () => {
-  try { await api('/api/v1/auth/logout', { method: 'POST' }); } catch (_) {}
+  try { await api('/api/v1/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: state.refreshToken }) }); } catch (_) {}
   state.token = null;
+  state.refreshToken = null;
   state.user = null;
   sessionStorage.removeItem('brightloop_access_token');
+  sessionStorage.removeItem('brightloop_refresh_token');
   document.getElementById('auth-status').style.display = 'none';
   document.getElementById('workspace-section').style.display = 'none';
   document.getElementById('auth-section').style.display = 'grid';
