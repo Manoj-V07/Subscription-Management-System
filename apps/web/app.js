@@ -47,13 +47,21 @@ function showMessage(id, message, type = 'success') {
 
 // Tab Switching
 function switchTab(tabName) {
-  document.querySelectorAll('.tab-button').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('.tab-button').forEach((b) => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
   document.querySelectorAll('.tab-content').forEach((tc) => (tc.style.display = 'none'));
 
   const btn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
-  if (btn) btn.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+  }
   const target = document.getElementById(`tab-${tabName}`);
-  if (target) target.style.display = 'block';
+  if (target) {
+    target.style.display = 'block';
+  }
 }
 
 document.querySelectorAll('.tab-button').forEach((btn) => {

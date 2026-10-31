@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <a href="#workspace-section" class="skip-link">Skip to main workspace</a>
     <main class="shell">
       <!-- Top Navigation -->
       <header class="top-nav">
@@ -73,17 +74,17 @@
       <!-- Authenticated Phase 2, 3 & 4 Workspace -->
       <section id="workspace-section" style="display: none;">
         <!-- Tabs Bar -->
-        <nav class="tabs-nav">
-          <button class="tab-button active" data-tab="quotes">Sales & Quotations</button>
-          <button class="tab-button" data-tab="subscriptions">Subscriptions</button>
-          <button class="tab-button" data-tab="customers">Customers</button>
-          <button class="tab-button" data-tab="invoices">Invoices & Billing</button>
-          <button class="tab-button" data-tab="finance">Finance & Payments</button>
-          <button class="tab-button" data-tab="catalog">Catalogue & Rules</button>
+        <nav class="tabs-nav" role="tablist" aria-label="Operational Workspace Modules">
+          <button class="tab-button active" data-tab="quotes" role="tab" aria-selected="true" id="tab-btn-quotes" aria-controls="tab-quotes">Sales & Quotations</button>
+          <button class="tab-button" data-tab="subscriptions" role="tab" aria-selected="false" id="tab-btn-subscriptions" aria-controls="tab-subscriptions">Subscriptions</button>
+          <button class="tab-button" data-tab="customers" role="tab" aria-selected="false" id="tab-btn-customers" aria-controls="tab-customers">Customers</button>
+          <button class="tab-button" data-tab="invoices" role="tab" aria-selected="false" id="tab-btn-invoices" aria-controls="tab-invoices">Invoices & Billing</button>
+          <button class="tab-button" data-tab="finance" role="tab" aria-selected="false" id="tab-btn-finance" aria-controls="tab-finance">Finance & Payments</button>
+          <button class="tab-button" data-tab="catalog" role="tab" aria-selected="false" id="tab-btn-catalog" aria-controls="tab-catalog">Catalogue & Rules</button>
         </nav>
 
         <!-- TAB 1: Quotations & Sales Studio -->
-        <div id="tab-quotes" class="tab-content">
+        <div id="tab-quotes" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-quotes">
           <div class="grid-2">
             <!-- Quotation Builder -->
             <div class="panel">
@@ -138,7 +139,7 @@
                 </div>
 
                 <!-- Live Mathematical Calculation Breakdown -->
-                <div class="calculation-box">
+                <div class="calculation-box" aria-live="polite">
                   <div class="calc-row"><span>Line Subtotal</span><span id="preview-subtotal">₹0.00</span></div>
                   <div class="calc-row"><span>Discount Applied</span><span id="preview-discount">-₹0.00</span></div>
                   <div class="calc-row"><span>Taxable Base</span><span id="preview-taxable">₹0.00</span></div>
@@ -163,11 +164,11 @@
                 <table id="quotations-table">
                   <thead>
                     <tr>
-                      <th>Quote #</th>
-                      <th>Customer</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                      <th>Action</th>
+                      <th scope="col">Quote #</th>
+                      <th scope="col">Customer</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Action</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -178,7 +179,7 @@
         </div>
 
         <!-- TAB 2: Confirmed Subscriptions -->
-        <div id="tab-subscriptions" class="tab-content" style="display: none;">
+        <div id="tab-subscriptions" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-subscriptions" style="display: none;">
           <div class="panel">
             <div class="panel-header">
               <div>
@@ -190,13 +191,13 @@
               <table id="subscriptions-table">
                 <thead>
                   <tr>
-                    <th>Subscription #</th>
-                    <th>Customer</th>
-                    <th>Plan</th>
-                    <th>Grand Total</th>
-                    <th>Balance Due</th>
-                    <th>Status</th>
-                    <th>Created At</th>
+                    <th scope="col">Subscription #</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Plan</th>
+                    <th scope="col">Grand Total</th>
+                    <th scope="col">Balance Due</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created At</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -206,7 +207,7 @@
         </div>
 
         <!-- TAB 3: Customers Directory -->
-        <div id="tab-customers" class="tab-content" style="display: none;">
+        <div id="tab-customers" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-customers" style="display: none;">
           <div class="grid-2">
             <div class="panel">
               <div class="panel-header">
@@ -219,10 +220,10 @@
                 <table id="customers-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Tax ID</th>
+                      <th scope="col">Name</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Phone</th>
+                      <th scope="col">Tax ID</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -250,7 +251,7 @@
         </div>
 
         <!-- TAB 4: Invoices & Scheduled Billing -->
-        <div id="tab-invoices" class="tab-content" style="display: none;">
+        <div id="tab-invoices" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-invoices" style="display: none;">
           <div class="grid-2">
             <!-- Billing Operations Panel -->
             <div class="panel">
@@ -276,10 +277,10 @@
                 <table id="billing-runs-table">
                   <thead>
                     <tr>
-                      <th>Run #</th>
-                      <th>Target Date</th>
-                      <th>Status</th>
-                      <th>Success / Failed</th>
+                      <th scope="col">Run #</th>
+                      <th scope="col">Target Date</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Success / Failed</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -291,10 +292,10 @@
                 <table id="occurrences-table">
                   <thead>
                     <tr>
-                      <th>Subscription</th>
-                      <th>Status</th>
-                      <th>Last Error</th>
-                      <th>Action</th>
+                      <th scope="col">Subscription</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Last Error</th>
+                      <th scope="col">Action</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -314,12 +315,12 @@
                 <table id="invoices-table">
                   <thead>
                     <tr>
-                      <th>Invoice #</th>
-                      <th>Customer</th>
-                      <th>Due Date</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th scope="col">Invoice #</th>
+                      <th scope="col">Customer</th>
+                      <th scope="col">Due Date</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Actions</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -330,7 +331,7 @@
         </div>
 
         <!-- TAB 5: Finance & Payments Dashboard -->
-        <div id="tab-finance" class="tab-content" style="display: none;">
+        <div id="tab-finance" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-finance" style="display: none;">
           <!-- KPI Metrics Row -->
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -417,7 +418,7 @@
                   <textarea id="payment-notes-input" rows="2" placeholder="Optional audit memo or remittance details"></textarea>
                 </label>
 
-                <div id="payment-allocation-preview" class="calculation-box" style="margin-top: 4px; display: none;">
+                <div id="payment-allocation-preview" class="calculation-box" aria-live="polite" style="margin-top: 4px; display: none;">
                   <div class="calc-row"><span>Invoice Total</span><span id="preview-invoice-total">₹0.00</span></div>
                   <div class="calc-row"><span>Current Balance Due</span><span id="preview-current-due">₹0.00</span></div>
                   <div class="calc-row"><span>Payment Allocation</span><span id="preview-payment-alloc" style="color: var(--primary);">₹0.00</span></div>
@@ -463,11 +464,11 @@
                 <table id="overdue-table">
                   <thead>
                     <tr>
-                      <th>Invoice #</th>
-                      <th>Customer</th>
-                      <th>Due Date</th>
-                      <th>Days Overdue</th>
-                      <th>Balance Due</th>
+                      <th scope="col">Invoice #</th>
+                      <th scope="col">Customer</th>
+                      <th scope="col">Due Date</th>
+                      <th scope="col">Days Overdue</th>
+                      <th scope="col">Balance Due</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -488,13 +489,13 @@
               <table id="payments-table">
                 <thead>
                   <tr>
-                    <th>Payment #</th>
-                    <th>Invoice #</th>
-                    <th>Customer</th>
-                    <th>Method</th>
-                    <th>Amount</th>
-                    <th>Received Date</th>
-                    <th>Reference</th>
+                    <th scope="col">Payment #</th>
+                    <th scope="col">Invoice #</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Method</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Received Date</th>
+                    <th scope="col">Reference</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -504,7 +505,7 @@
         </div>
 
         <!-- TAB 6: Catalogue & Rules -->
-        <div id="tab-catalog" class="tab-content" style="display: none;">
+        <div id="tab-catalog" class="tab-content" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-catalog" style="display: none;">
           <div class="grid-2">
             <!-- Products Panel -->
             <div class="panel">
@@ -518,10 +519,10 @@
                 <table id="products-table">
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th>Type</th>
-                      <th>Price</th>
-                      <th>Variants</th>
+                      <th scope="col">Product</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Price</th>
+                      <th scope="col">Variants</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -541,10 +542,10 @@
                 <table id="plans-table">
                   <thead>
                     <tr>
-                      <th>Plan Name</th>
-                      <th>Interval</th>
-                      <th>Min Qty</th>
-                      <th>Auto Renew</th>
+                      <th scope="col">Plan Name</th>
+                      <th scope="col">Interval</th>
+                      <th scope="col">Min Qty</th>
+                      <th scope="col">Auto Renew</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
