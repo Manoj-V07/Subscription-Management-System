@@ -138,10 +138,11 @@ a {
 }
 
 .tab-button.active {
-  color: #fff;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-hover);
-  box-shadow: var(--shadow-sm);
+  color: #000000;
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+  font-weight: 700;
 }
 
 /* Panels & Cards */
@@ -664,4 +665,169 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Customer Portal & Role-Based Layouts */
+.portal-hero {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(56, 189, 248, 0.08));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+}
+
+.portal-hero-content h1 {
+  margin: 8px 0 6px;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.portal-hero-content p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  max-width: 650px;
+}
+
+.portal-badge-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(56, 189, 248, 0.15);
+  color: #0284c7;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.role-tag.admin {
+  background: rgba(147, 51, 234, 0.15);
+  color: #9333ea;
+}
+
+.role-tag.staff {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.role-tag.customer {
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
+}
+
+.cust-tab-button {
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cust-tab-button:hover {
+  color: var(--text-main);
+  background: var(--bg-surface);
+}
+
+.cust-tab-button.active {
+  color: #000000;
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+  font-weight: 700;
+}
+
+.bank-details-card {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.bank-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.bank-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.bank-value {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.bank-value code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.status-posted {
+  background: rgba(56, 189, 248, 0.15);
+  color: #0284c7;
+}
+
+.status-overdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.status-draft {
+  background: rgba(156, 163, 175, 0.15);
+  color: #4b5563;
+}
+
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.status-paused {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.status-closed {
+  background: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
 }

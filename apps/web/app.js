@@ -70,6 +70,31 @@ document.querySelectorAll('.tab-button').forEach((btn) => {
   });
 });
 
+// Customer Portal Tab Switching
+function switchCustomerTab(tabName) {
+  document.querySelectorAll('.cust-tab-button').forEach((b) => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.cust-tab-content').forEach((tc) => (tc.style.display = 'none'));
+
+  const btn = document.querySelector(`.cust-tab-button[data-cust-tab="${tabName}"]`);
+  if (btn) {
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+  }
+  const target = document.getElementById(`cust-tab-${tabName}`);
+  if (target) {
+    target.style.display = 'block';
+  }
+}
+
+document.querySelectorAll('.cust-tab-button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    switchCustomerTab(btn.dataset.custTab);
+  });
+});
+
 function switchAuthView(view) {
   const isLogin = view === 'login';
   document.getElementById('login-view').hidden = !isLogin;
@@ -120,6 +145,7 @@ document.getElementById('logout-button')?.addEventListener('click', async () => 
   sessionStorage.removeItem('brightloop_access_token');
   document.getElementById('auth-status').style.display = 'none';
   document.getElementById('workspace-section').style.display = 'none';
+  document.getElementById('customer-portal-section').style.display = 'none';
   document.getElementById('auth-section').style.display = 'grid';
 });
 
@@ -130,22 +156,41 @@ async function initWorkspace() {
     state.user = me.data;
 
     document.getElementById('user-display').textContent = state.user.displayName;
-    document.getElementById('user-role').textContent = state.user.role;
+    const roleEl = document.getElementById('user-role');
+    roleEl.textContent = state.user.role;
+    roleEl.className = `role-tag ${state.user.role}`;
+
     document.getElementById('auth-status').style.display = 'flex';
     document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('workspace-section').style.display = 'block';
 
-    // Set default target billing date and payment date to today
-    const today = new Date().toISOString().slice(0, 10);
-    const dateInput = document.getElementById('billing-target-date');
-    if (dateInput && !dateInput.value) dateInput.value = today;
+    if (state.user.role === 'customer') {
+      document.getElementById('workspace-section').style.display = 'none';
+      document.getElementById('customer-portal-section').style.display = 'block';
+      const heroEl = document.getElementById('customer-hero-title');
+      if (heroEl) heroEl.textContent = `Welcome, ${state.user.displayName}`;
+      await loadCustomerPortalData();
+    } else {
+      document.getElementById('customer-portal-section').style.display = 'none';
+      document.getElementById('workspace-section').style.display = 'block';
 
-    const paymentDateInput = document.getElementById('payment-date-input');
-    if (paymentDateInput && !paymentDateInput.value) paymentDateInput.value = today;
+      // Role-based visibility for staff vs admin
+      const catalogTabBtn = document.getElementById('tab-btn-catalog');
+      if (catalogTabBtn) {
+        catalogTabBtn.style.display = state.user.role === 'admin' ? 'flex' : 'none';
+      }
 
-    await loadData();
-    setupQuotationStudio();
-    setupFinanceWorkspace();
+      // Set default target billing date and payment date to today
+      const today = new Date().toISOString().slice(0, 10);
+      const dateInput = document.getElementById('billing-target-date');
+      if (dateInput && !dateInput.value) dateInput.value = today;
+
+      const paymentDateInput = document.getElementById('payment-date-input');
+      if (paymentDateInput && !paymentDateInput.value) paymentDateInput.value = today;
+
+      await loadData();
+      setupQuotationStudio();
+      setupFinanceWorkspace();
+    }
   } catch (err) {
     console.error('Session initialization failed:', err);
   }
@@ -254,6 +299,10 @@ function renderPlansTable() {
 function renderQuotationsTable() {
   const tbody = document.querySelector('#quotations-table tbody');
   if (!tbody) return;
+  if (!state.quotations.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No quotations configured yet.</td></tr>';
+    return;
+  }
   tbody.innerHTML = state.quotations
     .map((q) => {
       let actions = '';
@@ -267,11 +316,15 @@ function renderQuotationsTable() {
         actions = `<span class="badge paid">Converted</span>`;
       }
 
+      const qNum = q.quotationNumber || q.quotation_number || q.id;
+      const cName = q.customerName || q.customer_name || '-';
+      const total = q.grandTotalCents !== undefined ? q.grandTotalCents : q.grand_total_cents;
+
       return `
       <tr>
-        <td><strong>${q.quotation_number}</strong></td>
-        <td>${q.customer_name || '-'}</td>
-        <td>${formatINR(q.grand_total_cents)}</td>
+        <td><strong>${qNum}</strong></td>
+        <td>${cName}</td>
+        <td>${formatINR(total)}</td>
         <td><span class="badge ${q.status}">${q.status}</span></td>
         <td>${actions}</td>
       </tr>
@@ -283,6 +336,10 @@ function renderQuotationsTable() {
 function renderSubscriptionsTable() {
   const tbody = document.querySelector('#subscriptions-table tbody');
   if (!tbody) return;
+  if (!state.subscriptions.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No confirmed subscriptions found.</td></tr>';
+    return;
+  }
   tbody.innerHTML = state.subscriptions
     .map((s) => {
       let lifecycle = '';
@@ -301,15 +358,22 @@ function renderSubscriptionsTable() {
         `;
       }
 
+      const subNum = s.subscriptionNumber || s.subscription_number || s.id;
+      const cName = s.customerName || s.customer_name || '-';
+      const pName = s.planName || s.plan_name || '-';
+      const grandTotal = s.grandTotalCents !== undefined ? s.grandTotalCents : s.grand_total_cents;
+      const balanceDue = s.balanceDueCents !== undefined ? s.balanceDueCents : s.balance_due_cents;
+      const createdAt = s.createdAt || s.created_at;
+
       return `
       <tr>
-        <td><strong>${s.subscription_number}</strong></td>
-        <td>${s.customer_name || '-'}</td>
-        <td>${s.plan_name || '-'}</td>
-        <td>${formatINR(s.grand_total_cents)}</td>
-        <td>${formatINR(s.balance_due_cents)}</td>
+        <td><strong>${subNum}</strong></td>
+        <td>${cName}</td>
+        <td>${pName}</td>
+        <td>${formatINR(grandTotal)}</td>
+        <td>${formatINR(balanceDue)}</td>
         <td><span class="badge ${s.status}">${s.status}</span></td>
-        <td>${lifecycle || new Date(s.created_at).toLocaleDateString()}</td>
+        <td>${lifecycle || (createdAt ? new Date(createdAt).toLocaleDateString() : '-')}</td>
       </tr>
     `;
     })
@@ -319,10 +383,20 @@ function renderSubscriptionsTable() {
 function renderInvoicesTable() {
   const tbody = document.querySelector('#invoices-table tbody');
   if (!tbody) return;
+  if (!state.invoices.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No invoices generated yet.</td></tr>';
+    return;
+  }
   tbody.innerHTML = state.invoices
     .map((inv) => {
+      const invNum = inv.invoiceNumber || inv.invoice_number || inv.id;
+      const cName = inv.customerName || inv.customer_name || '-';
+      const dueDate = inv.dueDate || inv.due_date;
+      const grandTotal = inv.grandTotalCents !== undefined ? inv.grandTotalCents : inv.grand_total_cents;
+      const balanceDue = inv.balanceDueCents !== undefined ? inv.balanceDueCents : inv.balance_due_cents;
+
       let actions = `
-        <button class="button secondary sm" onclick="downloadInvoicePdf('${inv.id}', '${inv.invoice_number}')">PDF</button>
+        <button class="button secondary sm" onclick="downloadInvoicePdf('${inv.id}', '${invNum}')">PDF</button>
         <button class="button secondary sm" onclick="printInvoice('${inv.id}')">Print</button>
       `;
 
@@ -332,7 +406,7 @@ function renderInvoicesTable() {
         actions += ` <button class="button primary sm" onclick="sendInvoice('${inv.id}')">Send</button>`;
       }
 
-      if (['confirmed', 'sent', 'partially_paid'].includes(inv.status) && inv.balance_due_cents > 0) {
+      if (['confirmed', 'sent', 'partially_paid', 'overdue'].includes(inv.status) && Number(balanceDue) > 0) {
         actions += ` <button class="button success sm" style="background:#059669;color:#fff;" onclick="selectInvoiceForPayment('${inv.id}')">Record Payment</button>`;
       }
 
@@ -342,12 +416,12 @@ function renderInvoicesTable() {
 
       return `
       <tr>
-        <td><strong>${inv.invoice_number}</strong></td>
-        <td>${inv.customer_name || '-'}</td>
-        <td>${inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
+        <td><strong>${invNum}</strong></td>
+        <td>${cName}</td>
+        <td>${dueDate ? new Date(dueDate).toLocaleDateString() : '-'}</td>
         <td>
-          ${formatINR(inv.grand_total_cents)}
-          ${inv.balance_due_cents > 0 && inv.balance_due_cents < inv.grand_total_cents ? `<br><small style="color:var(--warning)">Due: ${formatINR(inv.balance_due_cents)}</small>` : ''}
+          ${formatINR(grandTotal)}
+          ${Number(balanceDue) > 0 && Number(balanceDue) < Number(grandTotal) ? `<br><small style="color:var(--warning)">Due: ${formatINR(balanceDue)}</small>` : ''}
         </td>
         <td><span class="badge ${inv.status}">${inv.status}</span></td>
         <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${actions}</div></td>
@@ -360,16 +434,27 @@ function renderInvoicesTable() {
 function renderBillingRunsTable() {
   const tbody = document.querySelector('#billing-runs-table tbody');
   if (!tbody) return;
+  if (!state.billingRuns.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No billing sweeps executed yet.</td></tr>';
+    return;
+  }
   tbody.innerHTML = state.billingRuns
     .map(
-      (r) => `
+      (r) => {
+        const runNum = r.runNumber || r.run_number || r.id;
+        const targetDate = r.targetDate || r.target_date;
+        const successCount = r.successfulCount !== undefined ? r.successfulCount : r.successful_count;
+        const failedCount = r.failedCount !== undefined ? r.failedCount : r.failed_count;
+        const formattedDate = targetDate ? (targetDate.includes('T') ? targetDate.slice(0, 10) : targetDate) : '-';
+        return `
     <tr>
-      <td><strong>${r.run_number}</strong></td>
-      <td>${r.target_date}</td>
+      <td><strong>${runNum}</strong></td>
+      <td>${formattedDate}</td>
       <td><span class="badge ${r.status}">${r.status}</span></td>
-      <td><span style="color:var(--primary)">${r.successful_count} ok</span> / <span style="color:var(--danger)">${r.failed_count} err</span></td>
+      <td><span style="color:var(--primary)">${successCount} ok</span> / <span style="color:var(--danger)">${failedCount} err</span></td>
     </tr>
-  `
+  `;
+      }
     )
     .join('');
 }
@@ -377,18 +462,26 @@ function renderBillingRunsTable() {
 function renderOccurrencesTable() {
   const tbody = document.querySelector('#occurrences-table tbody');
   if (!tbody) return;
+  if (!state.occurrences.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No occurrences recorded.</td></tr>';
+    return;
+  }
   tbody.innerHTML = state.occurrences
     .map(
-      (o) => `
+      (o) => {
+        const subRef = o.subscriptionNumber || o.subscription_number || o.subscriptionId || o.subscription_id;
+        const err = o.lastError || o.last_error || 'None';
+        return `
     <tr>
-      <td><strong>${o.subscription_number || o.subscription_id}</strong></td>
+      <td><strong>${subRef}</strong></td>
       <td><span class="badge ${o.status}">${o.status}</span></td>
-      <td style="color:var(--danger)"><small>${o.last_error || 'None'}</small></td>
+      <td style="color:var(--danger)"><small>${err}</small></td>
       <td>
         ${o.status === 'failed' ? `<button class="button primary sm" onclick="retryOccurrence('${o.id}')">Retry</button>` : '-'}
       </td>
     </tr>
-  `
+  `;
+      }
     )
     .join('');
 }
@@ -448,23 +541,32 @@ function renderPaymentsTable() {
   const tbody = document.querySelector('#payments-table tbody');
   if (!tbody) return;
   if (!state.payments.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">No payment records found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">No payment records found.</td></tr>';
     return;
   }
 
   tbody.innerHTML = state.payments
     .map(
-      (p) => `
+      (p) => {
+        const pNum = p.paymentNumber || p.payment_number || p.id;
+        const invNum = p.invoiceNumber || p.invoice_number || '-';
+        const cName = p.customerName || p.customer_name || '-';
+        const method = (p.method || 'transfer').replace('_', ' ').toUpperCase();
+        const amount = p.amountCents !== undefined ? p.amountCents : p.amount_cents;
+        const recDate = p.receivedDate || p.received_date || p.createdAt || p.created_at;
+        const ref = p.externalReference || p.external_reference || p.notes || '-';
+        return `
     <tr>
-      <td><strong>${p.payment_number}</strong></td>
-      <td><code>${p.invoice_number || '-'}</code></td>
-      <td>${p.customer_name || '-'}</td>
-      <td><span class="badge pending">${p.method.replace('_', ' ').toUpperCase()}</span></td>
-      <td style="color:var(--primary);font-weight:700;">${formatINR(p.amount_cents)}</td>
-      <td>${p.received_date ? new Date(p.received_date).toLocaleDateString() : '-'}</td>
-      <td><small style="color:var(--text-muted)">${p.external_reference || p.notes || '-'}</small></td>
+      <td><strong>${pNum}</strong></td>
+      <td><code>${invNum}</code></td>
+      <td>${cName}</td>
+      <td><span class="badge pending">${method}</span></td>
+      <td style="color:var(--primary);font-weight:700;">${formatINR(amount)}</td>
+      <td>${recDate ? new Date(recDate).toLocaleDateString() : '-'}</td>
+      <td><small style="color:var(--text-muted)">${ref}</small></td>
     </tr>
-  `
+  `;
+      }
     )
     .join('');
 }
@@ -481,12 +583,12 @@ function renderOverdueTable() {
     .map(
       (o) => `
     <tr>
-      <td><strong>${o.invoiceNumber}</strong></td>
-      <td>${o.customerName}<br><small style="color:var(--text-muted)">${o.customerEmail}</small></td>
-      <td>${new Date(o.dueDate).toLocaleDateString()}</td>
-      <td><span class="badge overdue">${o.daysOverdue} days</span></td>
+      <td><strong>${o.invoiceNumber || o.invoice_number}</strong></td>
+      <td>${o.customerName || o.customer_name}<br><small style="color:var(--text-muted)">${o.customerEmail || o.customer_email || ''}</small></td>
+      <td>${new Date(o.dueDate || o.due_date).toLocaleDateString()}</td>
+      <td><span class="badge overdue">${o.daysOverdue || 0} days</span></td>
       <td>
-        <strong style="color:var(--danger)">${formatINR(o.balanceDueCents)}</strong><br>
+        <strong style="color:var(--danger)">${formatINR(o.balanceDueCents !== undefined ? o.balanceDueCents : o.balance_due_cents)}</strong><br>
         <button class="button primary sm" style="margin-top:4px;" onclick="selectInvoiceForPayment('${o.id}')">Pay Now</button>
       </td>
     </tr>
@@ -499,15 +601,21 @@ function populatePaymentInvoiceSelect() {
   const select = document.getElementById('payment-invoice-select');
   if (!select) return;
 
-  const unpaidInvoices = state.invoices.filter(
-    (i) => ['confirmed', 'sent', 'partially_paid'].includes(i.status) && i.balance_due_cents > 0
-  );
+  const unpaidInvoices = state.invoices.filter((i) => {
+    const bal = i.balanceDueCents !== undefined ? i.balanceDueCents : i.balance_due_cents;
+    return ['confirmed', 'sent', 'partially_paid', 'overdue'].includes(i.status) && Number(bal) > 0;
+  });
 
   const currentVal = select.value;
   select.innerHTML = '<option value="">-- Choose confirmed/unpaid invoice --</option>' +
     unpaidInvoices
       .map(
-        (i) => `<option value="${i.id}">${i.invoice_number} - ${i.customer_name} (Due: ${formatINR(i.balance_due_cents)})</option>`
+        (i) => {
+          const invNum = i.invoiceNumber || i.invoice_number || i.id;
+          const cName = i.customerName || i.customer_name || 'Client';
+          const bal = i.balanceDueCents !== undefined ? i.balanceDueCents : i.balance_due_cents;
+          return `<option value="${i.id}">${invNum} - ${cName} (Due: ${formatINR(bal)})</option>`;
+        }
       )
       .join('');
 
@@ -535,11 +643,12 @@ function setupFinanceWorkspace() {
       return;
     }
 
-    if (customerNameInput) customerNameInput.value = inv.customer_name || 'Customer';
+    const cName = inv.customerName || inv.customer_name || 'Customer';
+    if (customerNameInput) customerNameInput.value = cName;
     if (previewBox) previewBox.style.display = 'block';
 
-    const invTotal = inv.grand_total_cents;
-    const curDue = inv.balance_due_cents;
+    const invTotal = inv.grandTotalCents !== undefined ? inv.grandTotalCents : inv.grand_total_cents;
+    const curDue = inv.balanceDueCents !== undefined ? inv.balanceDueCents : inv.balance_due_cents;
     const payRupees = parseFloat(amountInput?.value) || 0;
     const payCents = Math.round(payRupees * 100);
 
@@ -563,7 +672,8 @@ function setupFinanceWorkspace() {
     const invId = invoiceSelect.value;
     const inv = state.invoices.find((i) => i.id === invId);
     if (inv && amountInput && (!amountInput.value || parseFloat(amountInput.value) <= 0)) {
-      amountInput.value = (inv.balance_due_cents / 100).toFixed(2);
+      const curDue = inv.balanceDueCents !== undefined ? inv.balanceDueCents : inv.balance_due_cents;
+      amountInput.value = (Number(curDue) / 100).toFixed(2);
     }
     updateAllocationPreview();
   });
@@ -969,6 +1079,194 @@ window.retryOccurrence = async (id) => {
     await loadData();
   } catch (err) { alert(err.message); }
 };
+
+// ==========================================
+// CUSTOMER PORTAL DATA & RENDERERS
+// ==========================================
+
+async function loadCustomerPortalData() {
+  const [custRes, subRes, invRes, payRes] = await Promise.all([
+    api('/api/v1/customers').catch(() => ({ data: [] })),
+    api('/api/v1/subscriptions').catch(() => ({ data: [] })),
+    api('/api/v1/invoices').catch(() => ({ data: [] })),
+    api('/api/v1/payments').catch(() => ({ data: [] })),
+  ]);
+
+  state.customers = custRes.data || [];
+  state.customerProfile = state.customers[0] || null;
+  state.subscriptions = subRes.data || [];
+  state.invoices = invRes.data || [];
+  state.payments = payRes.data || [];
+
+  renderCustomerKpis();
+  renderCustomerSubscriptionsTable();
+  renderCustomerInvoicesTable();
+  renderCustomerPaymentsTable();
+  populateCustomerProfileForm();
+}
+
+function renderCustomerKpis() {
+  const activeSubs = state.subscriptions.filter((s) => s.status === 'active' || s.status === 'confirmed').length;
+  const subsEl = document.getElementById('cust-kpi-subs-count');
+  if (subsEl) subsEl.textContent = activeSubs;
+
+  const totalBalanceDue = state.invoices.reduce((acc, inv) => {
+    return acc + Number(inv.balanceDueCents !== undefined ? inv.balanceDueCents : inv.balance_due_cents || 0);
+  }, 0);
+  const balEl = document.getElementById('cust-kpi-balance-due');
+  if (balEl) balEl.textContent = formatINR(totalBalanceDue);
+
+  const totalPaid = state.payments.reduce((acc, p) => {
+    return acc + Number(p.amountCents !== undefined ? p.amountCents : p.amount_cents || 0);
+  }, 0);
+  const paidEl = document.getElementById('cust-kpi-paid-amount');
+  if (paidEl) paidEl.textContent = formatINR(totalPaid);
+
+  const invEl = document.getElementById('cust-kpi-invoices-count');
+  if (invEl) invEl.textContent = state.invoices.length;
+}
+
+function renderCustomerSubscriptionsTable() {
+  const tbody = document.querySelector('#customer-subscriptions-table tbody');
+  if (!tbody) return;
+  if (!state.subscriptions.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px;">No active subscriptions found.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = state.subscriptions
+    .map((s) => {
+      const grandTotal = s.grandTotalCents !== undefined ? s.grandTotalCents : s.grand_total_cents;
+      const balanceDue = s.balanceDueCents !== undefined ? s.balanceDueCents : s.balance_due_cents;
+      const startsAt = s.startsAt || s.starts_at;
+      const formattedDate = startsAt ? new Date(startsAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+      const statusClass = `status-${s.status}`;
+      return `
+        <tr>
+          <td><strong>${s.subscriptionNumber || s.subscription_number || s.id}</strong></td>
+          <td>${s.planName || s.plan_name || 'Standard Tier'}</td>
+          <td><span style="text-transform: capitalize;">${s.planInterval || s.plan_interval || 'monthly'}</span></td>
+          <td>${formatINR(grandTotal)}</td>
+          <td>${formatINR(balanceDue)}</td>
+          <td><span class="status-badge ${statusClass}">${s.status}</span></td>
+          <td>${formattedDate}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function renderCustomerInvoicesTable() {
+  const tbody = document.querySelector('#customer-invoices-table tbody');
+  if (!tbody) return;
+  if (!state.invoices.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">No invoices generated yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = state.invoices
+    .map((inv) => {
+      const grandTotal = inv.grandTotalCents !== undefined ? inv.grandTotalCents : inv.grand_total_cents;
+      const balanceDue = inv.balanceDueCents !== undefined ? inv.balanceDueCents : inv.balance_due_cents;
+      const dueDate = inv.dueDate || inv.due_date;
+      const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+      const statusClass = `status-${inv.status}`;
+      return `
+        <tr>
+          <td><strong>${inv.invoiceNumber || inv.invoice_number || inv.id}</strong></td>
+          <td>${formattedDueDate}</td>
+          <td>${formatINR(grandTotal)}</td>
+          <td style="${Number(balanceDue) > 0 ? 'color: var(--danger); font-weight:600;' : ''}">${formatINR(balanceDue)}</td>
+          <td><span class="status-badge ${statusClass}">${inv.status}</span></td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <button class="button secondary sm" type="button" onclick="downloadInvoicePdf('${inv.id}', '${inv.invoiceNumber || inv.invoice_number}')">Download PDF</button>
+              <button class="button secondary sm" type="button" onclick="printInvoice('${inv.id}')">View</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function renderCustomerPaymentsTable() {
+  const tbody = document.querySelector('#customer-payments-table tbody');
+  if (!tbody) return;
+  if (!state.payments.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">No payments recorded yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = state.payments
+    .map((p) => {
+      const amount = p.amountCents !== undefined ? p.amountCents : p.amount_cents;
+      const date = p.receivedDate || p.received_date || p.createdAt || p.created_at;
+      const formattedDate = date ? new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+      return `
+        <tr>
+          <td><strong>${p.paymentNumber || p.payment_number || p.id}</strong></td>
+          <td>${p.invoiceNumber || p.invoice_number || '-'}</td>
+          <td>${formattedDate}</td>
+          <td><span style="text-transform: capitalize;">${(p.method || 'transfer').replace('_', ' ')}</span></td>
+          <td style="color: var(--primary); font-weight: 600;">${formatINR(amount)}</td>
+          <td><code>${p.externalReference || p.external_reference || '-'}</code></td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function populateCustomerProfileForm() {
+  const profile = state.customerProfile;
+  if (!profile) return;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+
+  setVal('cust-prof-name', profile.name || state.user?.displayName || '');
+  setVal('cust-prof-email', profile.email || state.user?.email || '');
+  setVal('cust-prof-phone', profile.phone || '');
+  setVal('cust-prof-tax', profile.taxIdentifier || profile.tax_identifier || '');
+
+  const addr = profile.billingAddress || profile.billing_address || {};
+  setVal('cust-prof-street', addr.street || '');
+  setVal('cust-prof-city', addr.city || '');
+  setVal('cust-prof-state', addr.state || '');
+  setVal('cust-prof-zip', addr.postalCode || addr.postal_code || '');
+  setVal('cust-prof-country', addr.country || 'India');
+}
+
+// Handle customer profile update
+document.getElementById('customer-profile-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!state.customerProfile?.id) {
+    showMessage('customer-profile-message', 'Customer profile record not found.', 'error');
+    return;
+  }
+  const form = e.currentTarget;
+  const name = form.querySelector('#cust-prof-name').value.trim();
+  const phone = form.querySelector('#cust-prof-phone').value.trim();
+  const taxIdentifier = form.querySelector('#cust-prof-tax').value.trim();
+  const billingAddress = {
+    street: form.querySelector('#cust-prof-street').value.trim(),
+    city: form.querySelector('#cust-prof-city').value.trim(),
+    state: form.querySelector('#cust-prof-state').value.trim(),
+    postalCode: form.querySelector('#cust-prof-zip').value.trim(),
+    country: form.querySelector('#cust-prof-country').value.trim(),
+  };
+
+  try {
+    const res = await api(`/api/v1/customers/${state.customerProfile.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, phone, taxIdentifier, billingAddress }),
+    });
+    state.customerProfile = res.data;
+    document.getElementById('customer-hero-title').textContent = `Welcome, ${res.data.name}`;
+    document.getElementById('user-display').textContent = res.data.name;
+    showMessage('customer-profile-message', 'Profile updated successfully!', 'success');
+  } catch (err) {
+    showMessage('customer-profile-message', err.message, 'error');
+  }
+});
 
 // Check existing session
 if (state.token) {

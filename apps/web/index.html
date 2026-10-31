@@ -91,6 +91,239 @@
         </div>
       </section>
 
+      <!-- Dedicated Customer Self-Service & Billing Portal (Visible ONLY for customer role) -->
+      <section id="customer-portal-section" style="display: none;">
+        <!-- Customer Portal Hero -->
+        <div class="portal-hero">
+          <div class="portal-hero-content">
+            <span class="portal-badge-pill">Customer Portal</span>
+            <h1 id="customer-hero-title">Welcome to your Portal</h1>
+            <p>Access your active subscriptions, review tax invoices, download PDF receipts, and update your company billing information.</p>
+          </div>
+        </div>
+
+        <!-- Customer Summary KPI Cards -->
+        <div class="kpi-grid" style="margin-bottom: 28px;">
+          <div class="kpi-card">
+            <span class="kpi-label">Active Subscriptions</span>
+            <div class="kpi-value" id="cust-kpi-subs-count">0</div>
+            <span class="kpi-subtext">Current recurring plans</span>
+          </div>
+          <div class="kpi-card highlight-blue">
+            <span class="kpi-label">Outstanding Balance</span>
+            <div class="kpi-value" id="cust-kpi-balance-due">₹0.00</div>
+            <span class="kpi-subtext">Total unpaid invoice amount</span>
+          </div>
+          <div class="kpi-card highlight-green">
+            <span class="kpi-label">Paid to Date</span>
+            <div class="kpi-value" id="cust-kpi-paid-amount">₹0.00</div>
+            <span class="kpi-subtext">Settled across all payments</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Total Invoices</span>
+            <div class="kpi-value" id="cust-kpi-invoices-count">0</div>
+            <span class="kpi-subtext">Invoices generated</span>
+          </div>
+        </div>
+
+        <!-- Customer Navigation Tabs -->
+        <nav class="tabs-nav" role="tablist" aria-label="Customer Self-Service Modules">
+          <button class="cust-tab-button active" data-cust-tab="subscriptions" role="tab" aria-selected="true" id="cust-tab-btn-subs" aria-controls="cust-tab-subscriptions">My Subscriptions</button>
+          <button class="cust-tab-button" data-cust-tab="invoices" role="tab" aria-selected="false" id="cust-tab-btn-invoices" aria-controls="cust-tab-invoices">Invoices & Receipts</button>
+          <button class="cust-tab-button" data-cust-tab="payments" role="tab" aria-selected="false" id="cust-tab-btn-payments" aria-controls="cust-tab-payments">Payment History</button>
+          <button class="cust-tab-button" data-cust-tab="profile" role="tab" aria-selected="false" id="cust-tab-btn-profile" aria-controls="cust-tab-profile">Company & Billing Profile</button>
+        </nav>
+
+        <!-- Customer TAB 1: My Subscriptions -->
+        <div id="cust-tab-subscriptions" class="cust-tab-content" role="tabpanel" tabindex="0" aria-labelledby="cust-tab-btn-subs">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>My Active Subscriptions</h2>
+                <p>Overview of your contracted recurring subscriptions and billing schedules.</p>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="customer-subscriptions-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Subscription #</th>
+                    <th scope="col">Plan Tier</th>
+                    <th scope="col">Billing Interval</th>
+                    <th scope="col">Recurring Total</th>
+                    <th scope="col">Balance Due</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Starts At</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer TAB 2: My Invoices & Receipts -->
+        <div id="cust-tab-invoices" class="cust-tab-content" role="tabpanel" tabindex="0" aria-labelledby="cust-tab-btn-invoices" style="display: none;">
+          <div class="grid-2">
+            <!-- Invoices Table Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Tax Invoices & Receipts</h2>
+                  <p>Download GST-compliant PDF invoices for tax filing and audit compliance.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="customer-invoices-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Invoice #</th>
+                      <th scope="col">Due Date</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Balance Due</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Document</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Wire Transfer & Remittance Instructions -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Payment & Wire Instructions</h2>
+                  <p>Remittance coordinates for electronic bank settlements.</p>
+                </div>
+              </div>
+              <div class="bank-details-card">
+                <div class="bank-row">
+                  <span class="bank-label">Beneficiary</span>
+                  <strong class="bank-value">Brightloop Technologies Private Limited</strong>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-label">Bank Name</span>
+                  <span class="bank-value">HDFC Bank Limited</span>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-label">Account Number</span>
+                  <code class="bank-value">50200098765432</code>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-label">IFSC Code</span>
+                  <code class="bank-value">HDFC0000240</code>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-label">Branch</span>
+                  <span class="bank-value">MG Road, Bengaluru - 560001</span>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-label">UPI ID</span>
+                  <code class="bank-value">billing@brightloop</code>
+                </div>
+              </div>
+              <p style="font-size: 13px; color: var(--text-muted); margin-top: 16px;">
+                Note: When executing NEFT/RTGS/IMPS, please include your <strong>Invoice #</strong> in the transaction remarks/memo for instant automated reconciliation.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer TAB 3: Payment History -->
+        <div id="cust-tab-payments" class="cust-tab-content" role="tabpanel" tabindex="0" aria-labelledby="cust-tab-btn-payments" style="display: none;">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Payment History & Ledger</h2>
+                <p>Record of all settled payments, electronic transfers, and allocations against your account.</p>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="customer-payments-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Payment #</th>
+                    <th scope="col">Invoice #</th>
+                    <th scope="col">Received Date</th>
+                    <th scope="col">Payment Method</th>
+                    <th scope="col">Amount Paid</th>
+                    <th scope="col">Reference / UTR</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer TAB 4: Company & Billing Profile -->
+        <div id="cust-tab-profile" class="cust-tab-content" role="tabpanel" tabindex="0" aria-labelledby="cust-tab-btn-profile" style="display: none;">
+          <div class="panel" style="max-width: 760px;">
+            <div class="panel-header">
+              <div>
+                <h2>Company & Billing Profile</h2>
+                <p>Keep your legal entity details, billing address, and tax identification accurate for invoicing.</p>
+              </div>
+            </div>
+            <form id="customer-profile-form">
+              <div class="form-row">
+                <label>
+                  Company / Legal Name
+                  <input id="cust-prof-name" name="name" type="text" placeholder="Acme Software Ltd" required />
+                </label>
+                <label>
+                  Contact Email
+                  <input id="cust-prof-email" name="email" type="email" readonly style="opacity: 0.8;" />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  Phone Number
+                  <input id="cust-prof-phone" name="phone" type="tel" placeholder="+91 98765 43210" />
+                </label>
+                <label>
+                  Tax Identifier (GSTIN / VAT)
+                  <input id="cust-prof-tax" name="taxIdentifier" type="text" placeholder="e.g. GSTIN29AABCU9603R1ZM" />
+                </label>
+              </div>
+
+              <label>
+                Street Address
+                <input id="cust-prof-street" name="street" type="text" placeholder="100 Tech Park, 4th Floor" />
+              </label>
+
+              <div class="form-row">
+                <label>
+                  City
+                  <input id="cust-prof-city" name="city" type="text" placeholder="Bengaluru" />
+                </label>
+                <label>
+                  State / Province
+                  <input id="cust-prof-state" name="state" type="text" placeholder="Karnataka" />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  Postal / ZIP Code
+                  <input id="cust-prof-zip" name="postalCode" type="text" placeholder="560001" />
+                </label>
+                <label>
+                  Country
+                  <input id="cust-prof-country" name="country" type="text" placeholder="India" />
+                </label>
+              </div>
+
+              <button class="button primary" type="submit" style="margin-top: 12px;">Save Profile Changes</button>
+              <p id="customer-profile-message" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <!-- Authenticated Phase 2, 3 & 4 Workspace -->
       <section id="workspace-section" style="display: none;">
         <!-- Tabs Bar -->
@@ -100,7 +333,7 @@
           <button class="tab-button" data-tab="customers" role="tab" aria-selected="false" id="tab-btn-customers" aria-controls="tab-customers">Customers</button>
           <button class="tab-button" data-tab="invoices" role="tab" aria-selected="false" id="tab-btn-invoices" aria-controls="tab-invoices">Invoices & Billing</button>
           <button class="tab-button" data-tab="finance" role="tab" aria-selected="false" id="tab-btn-finance" aria-controls="tab-finance">Finance & Payments</button>
-          <button class="tab-button" data-tab="catalog" role="tab" aria-selected="false" id="tab-btn-catalog" aria-controls="tab-catalog">Catalogue & Rules</button>
+          <button class="tab-button" data-tab="catalog" role="tab" aria-selected="false" id="tab-btn-catalog" aria-controls="tab-catalog" data-admin-only="true">Catalogue & Rules</button>
         </nav>
 
         <!-- TAB 1: Quotations & Sales Studio -->
