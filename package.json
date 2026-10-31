@@ -9,11 +9,11 @@
     "worker": "node apps/worker/index.js",
     "db:migrate": "node database/migrate.js",
     "db:seed": "node database/seed.js",
-    "test": "node --test tests/unit/pricing.test.js tests/unit/billing.test.js tests/integration/catalog.test.js tests/integration/customers_staff.test.js tests/integration/sales.test.js tests/integration/invoices.test.js tests/e2e/phase2.test.js tests/e2e/phase3.test.js",
-    "test:unit": "node --test tests/unit/pricing.test.js tests/unit/billing.test.js",
-    "test:integration": "node --test tests/integration/catalog.test.js tests/integration/customers_staff.test.js tests/integration/sales.test.js tests/integration/invoices.test.js",
-    "test:e2e": "node --test tests/e2e/phase2.test.js tests/e2e/phase3.test.js",
-    "check": "node --check apps/api/src/server.js && node --check apps/api/src/app.js && node --check apps/api/src/routes/catalog.js && node --check apps/api/src/routes/staff.js && node --check apps/api/src/routes/customers.js && node --check apps/api/src/routes/sales.js && node --check apps/api/src/routes/invoices.js && node --check apps/api/src/routes/billing.js && node --check apps/api/src/domain/pricing.js && node --check apps/api/src/domain/billing.js && node --check apps/api/src/domain/billing-worker.js && node --check apps/api/src/domain/notifications.js && node --check apps/worker/index.js && node --check database/migrate.js && node --check database/seed.js",
+    "test": "node --test tests/unit/pricing.test.js tests/unit/billing.test.js tests/unit/finance.test.js tests/integration/catalog.test.js tests/integration/customers_staff.test.js tests/integration/sales.test.js tests/integration/invoices.test.js tests/integration/payments.test.js tests/e2e/phase2.test.js tests/e2e/phase3.test.js tests/e2e/phase4.test.js",
+    "test:unit": "node --test tests/unit/pricing.test.js tests/unit/billing.test.js tests/unit/finance.test.js",
+    "test:integration": "node --test tests/integration/catalog.test.js tests/integration/customers_staff.test.js tests/integration/sales.test.js tests/integration/invoices.test.js tests/integration/payments.test.js",
+    "test:e2e": "node --test tests/e2e/phase2.test.js tests/e2e/phase3.test.js tests/e2e/phase4.test.js",
+    "check": "node --check apps/api/src/server.js && node --check apps/api/src/app.js && node --check apps/api/src/routes/catalog.js && node --check apps/api/src/routes/staff.js && node --check apps/api/src/routes/customers.js && node --check apps/api/src/routes/sales.js && node --check apps/api/src/routes/invoices.js && node --check apps/api/src/routes/billing.js && node --check apps/api/src/routes/payments.js && node --check apps/api/src/routes/reports.js && node --check apps/api/src/domain/pricing.js && node --check apps/api/src/domain/billing.js && node --check apps/api/src/domain/billing-worker.js && node --check apps/api/src/domain/notifications.js && node --check apps/api/src/domain/finance.js && node --check apps/worker/index.js && node --check database/migrate.js && node --check database/seed.js",
     "build": "node scripts/build.js"
   },
   "engines": {

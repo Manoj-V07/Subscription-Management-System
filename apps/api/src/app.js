@@ -8,6 +8,8 @@ const { createCustomersRouter } = require('./routes/customers');
 const { createSalesRouter } = require('./routes/sales');
 const { createInvoicesRouter } = require('./routes/invoices');
 const { createBillingRouter } = require('./routes/billing');
+const { createPaymentsRouter } = require('./routes/payments');
+const { createReportsRouter } = require('./routes/reports');
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}$/;
 
@@ -192,6 +194,8 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
   const salesRouter = createSalesRouter({ pool, audit, sendError, authenticate, requirePermission });
   const invoicesRouter = createInvoicesRouter({ pool, audit, sendError, authenticate, requirePermission });
   const billingRouter = createBillingRouter({ pool, audit, sendError, authenticate, requirePermission });
+  const paymentsRouter = createPaymentsRouter({ pool, audit, sendError, authenticate, requirePermission });
+  const reportsRouter = createReportsRouter({ pool, audit, sendError, authenticate, requirePermission });
 
   app.use('/api/v1', catalogRouter);
   app.use('/api/v1', staffRouter);
@@ -199,6 +203,8 @@ function createApp({ pool, jwtSecret, jwtExpiresIn = '15m', appOrigin = '*' }) {
   app.use('/api/v1', salesRouter);
   app.use('/api/v1', invoicesRouter);
   app.use('/api/v1', billingRouter);
+  app.use('/api/v1', paymentsRouter);
+  app.use('/api/v1', reportsRouter);
 
   app.use(express.static(require('node:path').join(__dirname, '../../web')));
   app.use((error, req, res, next) => {

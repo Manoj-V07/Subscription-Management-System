@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brightloop | Subscription Operations</title>
+    <title>Brightloop | Subscription & Finance Operations</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -68,90 +68,9 @@
             <p id="register-message" class="form-message" role="status"></p>
           </form>
         </div>
-
-        <!-- TAB 5: Invoices & Scheduled Billing -->
-        <div id="tab-invoices" class="tab-content" style="display: none;">
-          <div class="grid-2">
-            <!-- Billing Operations Panel -->
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Billing Operations</h2>
-                  <p>Execute scheduled billing runs and inspect background worker occurrences.</p>
-                </div>
-              </div>
-              <form id="run-billing-form">
-                <div class="form-row">
-                  <label>
-                    Target Billing Date
-                    <input id="billing-target-date" type="date" required />
-                  </label>
-                  <button class="button primary" type="submit" style="margin-top:22px;">Run Scheduled Billing</button>
-                </div>
-                <p id="billing-run-message" class="form-message" role="status"></p>
-              </form>
-
-              <h3 style="margin-top:24px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Recent Billing Sweeps</h3>
-              <div class="table-container">
-                <table id="billing-runs-table">
-                  <thead>
-                    <tr>
-                      <th>Run #</th>
-                      <th>Target Date</th>
-                      <th>Status</th>
-                      <th>Success / Failed</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-
-              <h3 style="margin-top:24px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Failure Queue & Retries</h3>
-              <div class="table-container">
-                <table id="occurrences-table">
-                  <thead>
-                    <tr>
-                      <th>Subscription</th>
-                      <th>Status</th>
-                      <th>Last Error</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Invoices List Panel -->
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Tax Invoices</h2>
-                  <p>View, confirm, send, and download customer invoice PDFs.</p>
-                </div>
-              </div>
-              <div class="table-container">
-                <table id="invoices-table">
-                  <thead>
-                    <tr>
-                      <th>Invoice #</th>
-                      <th>Customer</th>
-                      <th>Due Date</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </section>
 
-      <!-- Authenticated Phase 2 Workspace -->
+      <!-- Authenticated Phase 2, 3 & 4 Workspace -->
       <section id="workspace-section" style="display: none;">
         <!-- Tabs Bar -->
         <nav class="tabs-nav">
@@ -159,6 +78,7 @@
           <button class="tab-button" data-tab="subscriptions">Subscriptions</button>
           <button class="tab-button" data-tab="customers">Customers</button>
           <button class="tab-button" data-tab="invoices">Invoices & Billing</button>
+          <button class="tab-button" data-tab="finance">Finance & Payments</button>
           <button class="tab-button" data-tab="catalog">Catalogue & Rules</button>
         </nav>
 
@@ -329,7 +249,261 @@
           </div>
         </div>
 
-        <!-- TAB 4: Catalogue & Rules -->
+        <!-- TAB 4: Invoices & Scheduled Billing -->
+        <div id="tab-invoices" class="tab-content" style="display: none;">
+          <div class="grid-2">
+            <!-- Billing Operations Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Billing Operations</h2>
+                  <p>Execute scheduled billing runs and inspect background worker occurrences.</p>
+                </div>
+              </div>
+              <form id="run-billing-form">
+                <div class="form-row">
+                  <label>
+                    Target Billing Date
+                    <input id="billing-target-date" type="date" required />
+                  </label>
+                  <button class="button primary" type="submit" style="margin-top:22px;">Run Scheduled Billing</button>
+                </div>
+                <p id="billing-run-message" class="form-message" role="status"></p>
+              </form>
+
+              <h3 style="margin-top:24px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Recent Billing Sweeps</h3>
+              <div class="table-container">
+                <table id="billing-runs-table">
+                  <thead>
+                    <tr>
+                      <th>Run #</th>
+                      <th>Target Date</th>
+                      <th>Status</th>
+                      <th>Success / Failed</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <h3 style="margin-top:24px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Failure Queue & Retries</h3>
+              <div class="table-container">
+                <table id="occurrences-table">
+                  <thead>
+                    <tr>
+                      <th>Subscription</th>
+                      <th>Status</th>
+                      <th>Last Error</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Invoices List Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Tax Invoices</h2>
+                  <p>View, confirm, send, and download customer invoice PDFs.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="invoices-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice #</th>
+                      <th>Customer</th>
+                      <th>Due Date</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: Finance & Payments Dashboard -->
+        <div id="tab-finance" class="tab-content" style="display: none;">
+          <!-- KPI Metrics Row -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">Active Subscriptions</span>
+              <div class="kpi-value" id="kpi-active-subs-value">₹0.00</div>
+              <span class="kpi-subtext" id="kpi-active-subs-count">0 active subscriptions</span>
+            </div>
+            <div class="kpi-card highlight-green">
+              <span class="kpi-label">Revenue Collected</span>
+              <div class="kpi-value" id="kpi-revenue-collected">₹0.00</div>
+              <span class="kpi-subtext" id="kpi-payments-count">0 payments recorded</span>
+            </div>
+            <div class="kpi-card highlight-blue">
+              <span class="kpi-label">Amount Outstanding</span>
+              <div class="kpi-value" id="kpi-outstanding-cents">₹0.00</div>
+              <span class="kpi-subtext" id="kpi-unpaid-invoices-count">0 unpaid/partial invoices</span>
+            </div>
+            <div class="kpi-card highlight-red">
+              <span class="kpi-label">Overdue Invoices</span>
+              <div class="kpi-value" id="kpi-overdue-cents">₹0.00</div>
+              <span class="kpi-subtext" id="kpi-overdue-count">0 overdue invoices</span>
+            </div>
+            <div class="kpi-card" id="kpi-reconciliation-card">
+              <span class="kpi-label">Reconciliation Check</span>
+              <div class="kpi-value" id="kpi-reconciliation-status">Reconciled</div>
+              <span class="kpi-subtext" id="kpi-reconciliation-formula">Invoiced = Collected + Owed</span>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 24px;">
+            <!-- Record Payment Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Record Payment</h2>
+                  <p>Collect payments via bank transfer, card, UPI, cash, or cheque with atomic invoice allocation.</p>
+                </div>
+              </div>
+              <form id="record-payment-form">
+                <div class="form-row">
+                  <label>
+                    Select Invoice
+                    <select id="payment-invoice-select" required>
+                      <option value="">-- Choose confirmed/unpaid invoice --</option>
+                    </select>
+                  </label>
+                  <label>
+                    Customer
+                    <input id="payment-customer-name" type="text" placeholder="Auto-populated" readonly style="opacity: 0.8;" />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Payment Method
+                    <select id="payment-method-select" required>
+                      <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                      <option value="credit_card">Credit / Debit Card</option>
+                      <option value="upi">UPI (Instant VPA)</option>
+                      <option value="cheque">Cheque / Demand Draft</option>
+                      <option value="cash">Cash Receipt</option>
+                      <option value="other">Other Manual Settlement</option>
+                    </select>
+                  </label>
+                  <label>
+                    Received Date
+                    <input id="payment-date-input" type="date" required />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Payment Amount (₹)
+                    <input id="payment-amount-input" type="number" step="0.01" min="0.01" placeholder="0.00" required />
+                  </label>
+                  <label>
+                    External Reference / Txn ID
+                    <input id="payment-reference-input" type="text" placeholder="e.g. UTR12345678, CHQ-9901" />
+                  </label>
+                </div>
+
+                <label>
+                  Notes & Internal Memo
+                  <textarea id="payment-notes-input" rows="2" placeholder="Optional audit memo or remittance details"></textarea>
+                </label>
+
+                <div id="payment-allocation-preview" class="calculation-box" style="margin-top: 4px; display: none;">
+                  <div class="calc-row"><span>Invoice Total</span><span id="preview-invoice-total">₹0.00</span></div>
+                  <div class="calc-row"><span>Current Balance Due</span><span id="preview-current-due">₹0.00</span></div>
+                  <div class="calc-row"><span>Payment Allocation</span><span id="preview-payment-alloc" style="color: var(--primary);">₹0.00</span></div>
+                  <div class="calc-row total"><span>Remaining Balance Due</span><span class="amount" id="preview-remaining-due">₹0.00</span></div>
+                </div>
+
+                <button class="button primary" type="submit" style="margin-top: 8px;">Record & Allocate Payment</button>
+                <p id="payment-form-message" class="form-message" role="status"></p>
+              </form>
+            </div>
+
+            <!-- Overdue Aging & Financial Reports Export -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Financial Reports & Exports</h2>
+                  <p>Download RFC 4180 audit-compliant CSV reports for accounting and tax audits.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+                <button class="button secondary" id="btn-export-invoices-csv" type="button" style="justify-content: space-between;">
+                  <span>📄 Export Invoices Ledger (CSV)</span>
+                  <span style="font-size: 11px; opacity: 0.7;">RFC 4180</span>
+                </button>
+                <button class="button secondary" id="btn-export-payments-csv" type="button" style="justify-content: space-between;">
+                  <span>💳 Export Payments Ledger (CSV)</span>
+                  <span style="font-size: 11px; opacity: 0.7;">RFC 4180</span>
+                </button>
+                <button class="button secondary" id="btn-export-overdue-csv" type="button" style="justify-content: space-between;">
+                  <span>⚠️ Export Overdue Aging Report (CSV)</span>
+                  <span style="font-size: 11px; opacity: 0.7;">RFC 4180</span>
+                </button>
+              </div>
+
+              <div class="panel-header" style="margin-top: 16px;">
+                <div>
+                  <h3 style="font-size: 16px; margin: 0;">Overdue Invoices Tracking</h3>
+                  <p style="font-size: 13px; margin: 2px 0 0;">Invoices past their credit terms requiring collection.</p>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="overdue-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice #</th>
+                      <th>Customer</th>
+                      <th>Due Date</th>
+                      <th>Days Overdue</th>
+                      <th>Balance Due</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payments History Table -->
+          <div class="panel" style="margin-top: 24px;">
+            <div class="panel-header">
+              <div>
+                <h2>Payment Transactions Ledger</h2>
+                <p>Complete historical log of received payments, allocations, and references.</p>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="payments-table">
+                <thead>
+                  <tr>
+                    <th>Payment #</th>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Received Date</th>
+                    <th>Reference</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: Catalogue & Rules -->
         <div id="tab-catalog" class="tab-content" style="display: none;">
           <div class="grid-2">
             <!-- Products Panel -->

@@ -352,3 +352,35 @@ CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON invoices(subscription_id
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_entity ON email_notifications(entity_type, entity_id);
+
+
+-- Phase 4: Payments & Allocations
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_number TEXT NOT NULL UNIQUE,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  invoice_id UUID REFERENCES invoices(id) ON DELETE RESTRICT,
+  method TEXT NOT NULL CHECK (method IN ('bank_transfer', 'credit_card', 'upi', 'cash', 'cheque', 'other')),
+  amount_cents INT NOT NULL CHECK (amount_cents > 0),
+  currency TEXT NOT NULL DEFAULT 'INR',
+  received_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  external_reference TEXT,
+  notes TEXT,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payment_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id UUID NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+  invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE RESTRICT,
+  amount_cents INT NOT NULL CHECK (amount_cents > 0),
+  allocated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Phase 4 Indexes
+CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_received_date ON payments(received_date);
+CREATE INDEX IF NOT EXISTS idx_allocations_payment ON payment_allocations(payment_id);
+CREATE INDEX IF NOT EXISTS idx_allocations_invoice ON payment_allocations(invoice_id);

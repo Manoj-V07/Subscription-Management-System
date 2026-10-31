@@ -25,8 +25,51 @@ This repository contains the product specification in [`Subscription_Management_
 - **Phase 1:** Foundation and Access Control (Complete)
 - **Phase 2:** Catalogue and Sales Pipeline (Complete)
 - **Phase 3:** Subscription Billing, Invoicing & Delivery (Complete & Certified)
+- **Phase 4:** Payments and Finance (Complete & Certified)
 
-**Next Phase:** Phase 4: Payments and Finance.
+**Next Phase:** Phase 5: Hardening and launch.
+
+---
+
+## Phase 4 Implementation Summary
+
+Phase 4 delivers complete payment collection, atomic invoice allocation, overpayment prevention, overdue invoice aging, executive finance metrics, reconciliation validation, and RFC 4180 audit CSV exports.
+
+### Key Capabilities
+
+1. **Payment Collection & Atomic Allocation:**
+   - Multi-method manual settlement: `bank_transfer`, `credit_card`, `upi`, `cash`, `cheque`, and `other`.
+   - Atomic invoice allocation (`payments` + `payment_allocations` in an isolated SQL transaction).
+   - Strict overpayment prevention: rejecting payments exceeding `balance_due_cents`.
+   - Dual balance reduction: atomically updates both `invoices.balance_due_cents` and linked `subscriptions.balance_due_cents`.
+   - Automatic invoice status advancement: `partially_paid` upon partial receipt, and `paid` upon full settlement.
+   - Endpoints: `POST /api/v1/payments`, `GET /api/v1/payments`, `GET /api/v1/payments/:id`.
+
+2. **Overdue Aging & Debt Tracking:**
+   - Real-time aging computation: evaluates calendar days elapsed since `due_date`.
+   - Filterable overdue endpoint: `GET /api/v1/reports/overdue-invoices?minDaysOverdue=0&customerId=...`.
+   - Customer portal isolation: authenticated customers only see their own payment history and overdue records.
+
+3. **Financial Dashboard & Accounting Reconciliation:**
+   - Executive metrics endpoint: `GET /api/v1/reports/summary`.
+   - Answers the core finance questions:
+     - **Active Subscriptions:** Count & total recurring value in minor units (paise/cents).
+     - **Revenue Collected:** Total collected cents and completed transactions count.
+     - **Amount Outstanding:** Remaining unpaid/partial invoice balance.
+     - **Overdue Invoices:** Overdue count and delinquent balance.
+     - **Reconciliation Engine:** Proves the double-entry invariant: `Total Invoiced = Revenue Collected + Amount Outstanding`.
+   - Monthly and method revenue breakdowns: `GET /api/v1/reports/revenue`.
+
+4. **RFC 4180 Accounting Exports:**
+   - Endpoint: `POST /api/v1/reports/exports` supporting `invoices`, `payments`, and `overdue_invoices`.
+   - Fully compliant RFC 4180 CSV serializer with double-quote escaping, header generation, and audit logging.
+
+5. **Web Operations UI (Finance & Payments Workspace):**
+   - 5 KPI summary metric cards (Active Value, Collected, Outstanding, Overdue, and Reconciliation Status badge).
+   - Record Payment panel with dynamic invoice selection, auto-populated customer details, and real-time allocation preview with overpayment warnings.
+   - Quick "Record Payment" button directly from invoice and overdue tables.
+   - One-click CSV export buttons for immediate download of accounting-ready audit files.
+   - Historical Payment Transactions ledger.
 
 ---
 

@@ -34,13 +34,13 @@
 
 **Exit:** a due subscription produces one correct invoice and failures are retryable/visible. Certified via `tests/e2e/phase3.test.js`.
 
-## Phase 4: Payments and finance
+## Phase 4: Payments and finance (Complete & Certified)
 
-- Payment recording/allocation.
-- Outstanding and overdue views.
-- Finance dashboard, filters, exports, and reconciliation checks.
+- Payment recording/allocation (multi-method, atomic allocation, overpayment rejection).
+- Outstanding and overdue views (aging in calendar days, delinquent balance tracking).
+- Finance dashboard, filters, exports (RFC 4180 CSV), and reconciliation checks (`Total Invoiced = Collected + Owed`).
 
-**Exit:** finance can answer active, collected, owed, and overdue questions from the application.
+**Exit:** finance can answer active, collected, owed, and overdue questions from the application. Certified via `tests/e2e/phase4.test.js`.
 
 ## Phase 5: Hardening and launch
 
