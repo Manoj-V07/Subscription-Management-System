@@ -1,5 +1,6 @@
 const express = require('express');
 const { calculateDocument, generateDocumentNumber } = require('../domain/pricing');
+const { canTransitionSubscription, addBillingInterval } = require('../domain/billing');
 
 function createSalesRouter({ pool, audit, sendError, authenticate, requirePermission }) {
   const router = express.Router();
@@ -701,6 +702,185 @@ function createSalesRouter({ pool, audit, sendError, authenticate, requirePermis
       res.json({ data: mapSubscriptionRow(row) });
     } catch (error) {
       sendError(res, 500, 'INTERNAL_ERROR', 'Unable to retrieve subscription.');
+    }
+  });
+
+
+  // POST /api/v1/subscriptions/:id/activate
+  router.post('/subscriptions/:id/activate', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+    try {
+      const subRes = await pool.query(
+        `SELECT s.*, p.interval AS plan_interval, p.interval_count AS plan_interval_count
+         FROM subscriptions s
+         JOIN plans p ON p.id = s.plan_id
+         WHERE s.id = $1`,
+        [req.params.id],
+      );
+      if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
+      const sub = subRes.rows[0];
+
+      if (!canTransitionSubscription(sub.status, 'active')) {
+        return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be activated.`);
+      }
+
+      const nextBillingAt = sub.next_billing_at || sub.starts_at || new Date().toISOString();
+
+      const updateRes = await pool.query(
+        `UPDATE subscriptions
+         SET status = 'active', next_billing_at = $1, updated_at = NOW()
+         WHERE id = $2 RETURNING *`,
+        [nextBillingAt, sub.id],
+      );
+
+      await audit({
+        actorUserId: req.user.id,
+        action: 'subscription.activated',
+        entityType: 'subscription',
+        entityId: sub.id,
+        metadata: { subscriptionNumber: sub.subscription_number, status: 'active', nextBillingAt },
+        requestId: req.requestId,
+      });
+
+      res.json({ data: mapSubscriptionRow(updateRes.rows[0]) });
+    } catch (error) {
+      console.error('Error activating subscription:', error);
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to activate subscription.');
+    }
+  });
+
+  // POST /api/v1/subscriptions/:id/pause
+  router.post('/subscriptions/:id/pause', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+    try {
+      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
+      const sub = subRes.rows[0];
+
+      if (!canTransitionSubscription(sub.status, 'paused')) {
+        return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be paused.`);
+      }
+
+      const updateRes = await pool.query(
+        "UPDATE subscriptions SET status = 'paused', updated_at = NOW() WHERE id = $1 RETURNING *",
+        [sub.id],
+      );
+
+      await audit({
+        actorUserId: req.user.id,
+        action: 'subscription.paused',
+        entityType: 'subscription',
+        entityId: sub.id,
+        metadata: { subscriptionNumber: sub.subscription_number },
+        requestId: req.requestId,
+      });
+
+      res.json({ data: mapSubscriptionRow(updateRes.rows[0]) });
+    } catch (error) {
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to pause subscription.');
+    }
+  });
+
+  // POST /api/v1/subscriptions/:id/resume
+  router.post('/subscriptions/:id/resume', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+    try {
+      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
+      const sub = subRes.rows[0];
+
+      if (!canTransitionSubscription(sub.status, 'active')) {
+        return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be resumed.`);
+      }
+
+      const updateRes = await pool.query(
+        "UPDATE subscriptions SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *",
+        [sub.id],
+      );
+
+      await audit({
+        actorUserId: req.user.id,
+        action: 'subscription.resumed',
+        entityType: 'subscription',
+        entityId: sub.id,
+        metadata: { subscriptionNumber: sub.subscription_number },
+        requestId: req.requestId,
+      });
+
+      res.json({ data: mapSubscriptionRow(updateRes.rows[0]) });
+    } catch (error) {
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to resume subscription.');
+    }
+  });
+
+  // POST /api/v1/subscriptions/:id/renew
+  router.post('/subscriptions/:id/renew', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+    try {
+      const subRes = await pool.query(
+        `SELECT s.*, p.interval AS plan_interval, p.interval_count AS plan_interval_count
+         FROM subscriptions s
+         JOIN plans p ON p.id = s.plan_id
+         WHERE s.id = $1`,
+        [req.params.id],
+      );
+      if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
+      const sub = subRes.rows[0];
+
+      if (sub.status !== 'active') {
+        return sendError(res, 400, 'INVALID_STATE', `Only active subscriptions can be renewed. Current status: '${sub.status}'`);
+      }
+
+      const currentNext = sub.next_billing_at ? new Date(sub.next_billing_at) : new Date();
+      const advancedNext = addBillingInterval(currentNext, sub.plan_interval, sub.plan_interval_count || 1);
+
+      const updateRes = await pool.query(
+        `UPDATE subscriptions
+         SET next_billing_at = $1, updated_at = NOW()
+         WHERE id = $2 RETURNING *`,
+        [advancedNext.toISOString(), sub.id],
+      );
+
+      await audit({
+        actorUserId: req.user.id,
+        action: 'subscription.renewed',
+        entityType: 'subscription',
+        entityId: sub.id,
+        metadata: { subscriptionNumber: sub.subscription_number, nextBillingAt: advancedNext.toISOString() },
+        requestId: req.requestId,
+      });
+
+      res.json({ data: mapSubscriptionRow(updateRes.rows[0]) });
+    } catch (error) {
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to renew subscription.');
+    }
+  });
+
+  // POST /api/v1/subscriptions/:id/close
+  router.post('/subscriptions/:id/close', authenticate, requirePermission('subscriptions.manage'), async (req, res) => {
+    const { reason = null } = req.body || {};
+    try {
+      const subRes = await pool.query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+      if (!subRes.rowCount) return sendError(res, 404, 'NOT_FOUND', 'Subscription not found.');
+      const sub = subRes.rows[0];
+
+      if (!canTransitionSubscription(sub.status, 'closed')) {
+        return sendError(res, 400, 'INVALID_STATE', `Subscription in '${sub.status}' state cannot be closed.`);
+      }
+
+      const updateRes = await pool.query(
+        "UPDATE subscriptions SET status = 'closed', updated_at = NOW() WHERE id = $1 RETURNING *",
+        [sub.id],
+      );
+
+      await audit({
+        actorUserId: req.user.id,
+        action: 'subscription.closed',
+        entityType: 'subscription',
+        entityId: sub.id,
+        metadata: { subscriptionNumber: sub.subscription_number, reason },
+        requestId: req.requestId,
+      });
+
+      res.json({ data: mapSubscriptionRow(updateRes.rows[0]) });
+    } catch (error) {
+      sendError(res, 500, 'INTERNAL_ERROR', 'Unable to close subscription.');
     }
   });
 

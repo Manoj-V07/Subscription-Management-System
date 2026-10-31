@@ -2,7 +2,7 @@
 
 Brightloop is a unified subscription-management platform for configuring products and plans, converting quotations into subscriptions, automating recurring billing, recording payments, and reporting revenue.
 
-This repository currently contains the product specification in [`Subscription_Management_System.pdf`](./Subscription_Management_System.pdf) and the implementation documentation under [`docs/`](./docs/).
+This repository contains the product specification in [`Subscription_Management_System.pdf`](./Subscription_Management_System.pdf) and the architecture and technical documentation under [`docs/`](./docs/).
 
 ## Documentation
 
@@ -18,67 +18,89 @@ This repository currently contains the product specification in [`Subscription_M
 | [Testing and Operations](./docs/08-testing-and-operations.md) | Test strategy, performance targets, observability, backups, and support runbooks |
 | [Roadmap](./docs/09-roadmap.md) | Delivery phases, definition of done, and optional differentiating features |
 
-## Product goals
-
-- Replace spreadsheet-based subscription tracking with a reliable system of record.
-- Automate invoice generation for every due subscription without duplicates or omissions.
-- Give admins and staff controlled operational access while keeping customer data private.
-- Give customers a self-service portal for subscriptions, invoices, payments, and account recovery.
-- Give finance a current view of active subscriptions, collected revenue, outstanding balances, and overdue invoices.
-- Keep list and dashboard operations responsive in under two seconds at the expected scale.
-
-## Recommended implementation baseline
-
-The documentation assumes:
-
-- **Frontend:** React, TypeScript, Vite, React Router, TanStack Query, React Hook Form, and a tested component system.
-- **Backend:** TypeScript, NestJS or Fastify, REST/JSON API, OpenAPI, background workers, and a transactional service layer.
-- **Database:** PostgreSQL with UUID identifiers, foreign keys, constraints, indexes, and migrations.
-- **Queue and cache:** Redis-backed job queue for billing, email, and report work; cache only read models that can tolerate short-lived staleness.
-- **Object storage:** S3-compatible storage for generated invoice PDFs and exports.
-- **Local orchestration:** Docker Compose for PostgreSQL, Redis, API, worker, and frontend.
-
-These are implementation defaults, not hidden requirements. A replacement technology must preserve the documented behaviour, security controls, API contracts, and performance targets.
-
-## Mandatory scope
-
-1. Account registration, unique email, password policy, login, logout, and password reset.
-2. Roles for administrator, internal staff, and customer with least-privilege access.
-3. Admin-only staff creation.
-4. Product catalogue with product type, sales price, cost price, notes, variants, and price adjustments.
-5. Plans with daily, weekly, monthly, or yearly billing intervals, quantity minimums, availability dates, and lifecycle options.
-6. Quotation templates and quotations with validity periods and product/plan lines.
-7. Subscription lifecycle from Draft to Quotation to Confirmed to Active to Closed.
-8. Subscription numbers, customer, plan, dates, payment terms, lines, quantities, prices, taxes, and totals.
-9. Automated due-invoice generation from active subscriptions, with duplicate and missed-billing protection.
-10. Invoice lifecycle Draft to Confirmed to Paid, with cancel/send/print actions.
-11. Configurable tax rules and automatic tax calculation.
-12. Admin-only discount rules for fixed or percentage discounts, thresholds, validity, usage limits, and product/subscription scope.
-13. Payment recording with method, amount, date, note, and invoice allocation.
-14. Outstanding and overdue invoice views.
-15. Finance dashboard with active subscriptions, revenue, payments, overdue invoices, filters, and summary views.
-16. Customer portal restricted to the customer’s own subscriptions and invoices.
-
-## Getting started
-
-The project implementation should follow [`docs/06-build-and-delivery.md`](./docs/06-build-and-delivery.md). The first delivery milestone is documentation approval; application scaffolding should begin only after the API and data-model decisions are accepted.
-
 ## Status
 
-**Phase:** Phase 1 foundation and access implemented
-**Next step:** Review the Phase 1 workflow, then implement catalogue and sales in Phase 2.
+**Phases Completed:**
+- **Phase 0:** Documentation and Architecture Decisions (Complete)
+- **Phase 1:** Foundation and Access Control (Complete)
+- **Phase 2:** Catalogue and Sales Pipeline (Complete)
+- **Phase 3:** Subscription Billing, Invoicing & Delivery (Complete & Certified)
 
-## Phase 1 status
+**Next Phase:** Phase 4: Payments and Finance.
 
-The initial runnable slice includes:
+---
 
-- PostgreSQL schema, migrations, and deterministic seed data.
-- Customer registration with password policy validation.
-- JWT login, protected sessions, role and permission resolution.
-- Password reset request/completion flow with a development-only reset-token header.
-- Append-only audit events for identity actions.
-- Admin dashboard and audit endpoints.
-- Responsive login/registration web shell.
-- End-to-end workflow tests and build/syntax checks.
+## Phase 3 Implementation Summary
 
-For local setup, copy [`.env.example`](./.env.example) to `.env`, start PostgreSQL with `docker compose up -d postgres`, then run `npm install`, `npm run db:migrate`, `npm run db:seed`, and `npm start`.
+Phase 3 implements recurring subscription billing, idempotent invoice generation, background billing workers, invoice lifecycle state machines, PDF rendering, email delivery tracking, and resilience testing.
+
+### Key Capabilities
+
+1. **Subscription Lifecycle & Scheduling:**
+   - Formal state machine: `draft -> quotation -> confirmed -> active -> closed`, with `active <-> paused` and renewal loops.
+   - Endpoints: `POST /api/v1/subscriptions/:id/activate`, `/pause`, `/resume`, `/renew`, `/close`.
+   - Precise UTC billing interval calculation for `daily`, `weekly`, `monthly` (with calendar month-end day clamping), and `yearly` (with leap-year preservation).
+
+2. **Idempotent Billing Engine & Worker:**
+   - `billing_runs` records execution batches, target dates, processed totals, and error summaries.
+   - `billing_occurrences` enforces unique period keys (`sub_${id}:${periodStart}:${periodEnd}`) preventing duplicate invoicing.
+   - Automated due-date calculation based on payment terms.
+   - Visible failure queue: failed occurrences log `last_error` and can be retried via `POST /api/v1/billing-occurrences/:id/retry`.
+   - Standalone background worker process (`apps/worker/index.js`) for daemonized billing sweeps (`npm run worker`).
+
+3. **Invoicing & Delivery Pipeline:**
+   - Invoices state machine: `draft -> confirmed -> sent -> partially_paid -> paid -> overdue -> cancelled`.
+   - Endpoints: `GET /api/v1/invoices`, `GET /api/v1/invoices/:id`, `POST /api/v1/invoices/:id/confirm`, `POST /api/v1/invoices/:id/send`, `POST /api/v1/invoices/:id/cancel`.
+   - Standard PDF 1.4 generation without external binary dependencies via `GET /api/v1/invoices/:id/pdf`.
+   - Email dispatch simulator recording delivery logs in `email_notifications`.
+   - Strict customer portal data isolation (customers can only view and download their own invoices).
+
+4. **Web Operations UI:**
+   - Sales & Quotations Studio with live calculation breakdown.
+   - Subscriptions tab with lifecycle actions (`Activate`, `Pause`, `Resume`, `Renew`, `Close`).
+   - Invoices & Billing tab with scheduled billing trigger, recent sweeps log, failure queue with retries, and invoice actions (`Confirm`, `Send Email`, `PDF`, `Print`, `Cancel`).
+
+---
+
+## Getting Started
+
+### Local Setup
+
+```powershell
+# 1. Install dependencies
+npm install
+
+# 2. Run schema migrations and database seed (if PostgreSQL is running)
+npm run db:migrate
+npm run db:seed
+
+# 3. Build web assets
+npm run build
+
+# 4. Start API server
+npm start
+
+# 5. (Optional) Run background billing worker daemon
+npm run worker
+```
+
+The seeded development administrator is `admin@brightloop.example` with password `Admin@12345`.
+
+### Testing
+
+```powershell
+# Run the complete test suite (Unit, Integration, and E2E)
+npm test
+
+# Run unit tests (Pricing arithmetic, Billing intervals, PDF rendering)
+npm run test:unit
+
+# Run integration tests (Catalog, Customers, Sales, Invoices & Billing)
+npm run test:integration
+
+# Run Phase 2 & Phase 3 End-to-End certification suites
+npm run test:e2e
+
+# Run codebase syntax and lint checks
+npm run check
+```

@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-## Phase 0: Documentation and decisions
+## Phase 0: Documentation and decisions (Complete)
 
 - Approve mandatory requirements, roles, stack, currency/time policy, and API conventions.
 - Confirm organisation/tenant scope and payment-provider strategy.
@@ -8,30 +8,31 @@
 
 **Exit:** signed-off requirements and architecture decisions.
 
-## Phase 1: Foundation and access
+## Phase 1: Foundation and access (Complete)
 
 - Monorepo and CI.
 - Database migrations and seed data.
 - Identity, sessions, roles, permissions, audit events.
 - App shell, navigation, login, registration, reset, and portal shell.
 
-**Exit:** users can securely access the correct role experience.
+**Exit:** users can securely access the correct role experience. Certified via `tests/e2e/phase1.test.js`.
 
-## Phase 2: Catalogue and sales
+## Phase 2: Catalogue and sales (Complete)
 
 - Products, variants, plans, tax rules, discount rules.
 - Customers and staff administration.
 - Quotation templates, quotation builder, lifecycle, and conversion.
 
-**Exit:** a valid quotation can become a confirmed subscription with a calculation breakdown.
+**Exit:** a valid quotation can become a confirmed subscription with a calculation breakdown. Certified via `tests/e2e/phase2.test.js`.
 
-## Phase 3: Subscription billing
+## Phase 3: Subscription billing (Complete)
 
-- Subscription lifecycle and schedules.
+- Subscription lifecycle and schedules (activate, pause, resume, renew, close).
 - Billing occurrence records and idempotent worker.
-- Invoice generation, invoice lifecycle, PDF, email delivery.
+- Invoice generation, invoice lifecycle (confirm, send, cancel), PDF generation, email delivery.
+- Failure queue with retryability and visibility.
 
-**Exit:** a due subscription produces one correct invoice and failures are retryable/visible.
+**Exit:** a due subscription produces one correct invoice and failures are retryable/visible. Certified via `tests/e2e/phase3.test.js`.
 
 ## Phase 4: Payments and finance
 
@@ -64,4 +65,3 @@ Prioritise based on customer value and payment-provider constraints:
 ## Definition of done
 
 A feature is complete only when its API contract, authorization policy, database migration, UI states, audit behaviour, automated tests, documentation, observability, and rollback/recovery impact are addressed. Financial features additionally require idempotency and reconciliation coverage.
-

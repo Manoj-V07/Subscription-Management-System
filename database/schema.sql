@@ -255,3 +255,100 @@ CREATE INDEX IF NOT EXISTS idx_quotation_lines_quotation ON quotation_lines(quot
 CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_subscription_lines_subscription ON subscription_lines(subscription_id);
+
+
+-- Phase 3: Billing Runs
+CREATE TABLE IF NOT EXISTS billing_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_number TEXT NOT NULL UNIQUE,
+  target_date TIMESTAMPTZ NOT NULL,
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  total_subscriptions INT NOT NULL DEFAULT 0,
+  successful_count INT NOT NULL DEFAULT 0,
+  failed_count INT NOT NULL DEFAULT 0,
+  error_summary TEXT,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+-- Phase 3: Invoices & Lines
+CREATE TABLE IF NOT EXISTS invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number TEXT NOT NULL UNIQUE,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+  billing_occurrence_id UUID,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'confirmed', 'sent', 'partially_paid', 'paid', 'overdue', 'cancelled', 'voided')),
+  issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_date DATE NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'INR',
+  subtotal_cents INT NOT NULL CHECK (subtotal_cents >= 0),
+  discount_cents INT NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
+  tax_cents INT NOT NULL DEFAULT 0 CHECK (tax_cents >= 0),
+  grand_total_cents INT NOT NULL CHECK (grand_total_cents >= 0),
+  balance_due_cents INT NOT NULL CHECK (balance_due_cents >= 0),
+  payment_terms_days INT NOT NULL DEFAULT 15 CHECK (payment_terms_days >= 0),
+  snapshot_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
+  cancellation_reason TEXT,
+  pdf_url TEXT,
+  sent_at TIMESTAMPTZ,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS invoice_lines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  quantity INT NOT NULL CHECK (quantity > 0),
+  unit_price_cents INT NOT NULL CHECK (unit_price_cents >= 0),
+  variant_adjustment_cents INT NOT NULL DEFAULT 0,
+  line_subtotal_cents INT NOT NULL CHECK (line_subtotal_cents >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Phase 3: Billing Occurrences (Idempotency Record)
+CREATE TABLE IF NOT EXISTS billing_occurrences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE RESTRICT,
+  billing_run_id UUID REFERENCES billing_runs(id) ON DELETE SET NULL,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  period_start TIMESTAMPTZ NOT NULL,
+  period_end TIMESTAMPTZ NOT NULL,
+  invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'succeeded', 'failed')),
+  retry_count INT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Phase 3: Email Delivery Notifications
+CREATE TABLE IF NOT EXISTS email_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type TEXT NOT NULL,
+  entity_id UUID NOT NULL,
+  recipient_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('queued', 'sent', 'failed')),
+  retry_count INT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Phase 3 Indexes
+CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_billing_runs_status ON billing_runs(status);
+CREATE INDEX IF NOT EXISTS idx_billing_occurrences_sub ON billing_occurrences(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_billing_occurrences_status ON billing_occurrences(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON invoices(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
+CREATE INDEX IF NOT EXISTS idx_email_notifications_entity ON email_notifications(entity_type, entity_id);

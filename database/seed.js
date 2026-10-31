@@ -117,7 +117,7 @@ async function main() {
     );
 
     await client.query('COMMIT');
-    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345 with Phase 2 initial catalogue.');
+    console.log('Seed complete. Admin: admin@brightloop.example / Admin@12345 with Phase 3 catalogue, subscriptions, and billing engine.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
